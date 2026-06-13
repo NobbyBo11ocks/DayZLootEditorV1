@@ -1,5 +1,5 @@
 using System.Xml.Linq;
-using DayZLootForge.Services;
+using DayZLootEditor.Services;
 
 namespace DayZLootEditor.Tests;
 
@@ -27,6 +27,40 @@ public sealed class CustomCeServiceTests
 
         Assert.Equal("types_custom.xml", (string?)registration.Attribute("name"));
         Assert.Equal("types", (string?)registration.Attribute("type"));
+    }
+
+
+    [Fact]
+    public async Task AddOrRegisterFileAsync_Throws_WhenSamePathIsAlreadyRegisteredWithDifferentType()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/testmission");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "modtypes"));
+        await File.WriteAllTextAsync(
+            Path.Combine(missionFolder, "cfgeconomycore.xml"),
+            """
+            <economycore>
+                <ce folder="modtypes">
+                    <file name="types_custom.xml" type="types" />
+                </ce>
+            </economycore>
+            """);
+
+        var service = new CustomCeService();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.AddOrRegisterFileAsync(missionFolder, "modtypes", "types_custom.xml", "events"));
+
+        Assert.Contains("already registered as type 'types'", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var economyCore = XDocument.Load(Path.Combine(missionFolder, "cfgeconomycore.xml"));
+        var registrations = economyCore.Root!
+            .Elements("ce")
+            .SelectMany(element => element.Elements("file"))
+            .ToList();
+
+        Assert.Single(registrations);
+        Assert.Equal("types", (string?)registrations[0].Attribute("type"));
     }
 
 
@@ -140,4 +174,25 @@ public sealed class CustomCeServiceTests
             }
         }
     }
+
+
+    [Fact]
+    public async Task RepairFileRootAsync_CleansUpTemporaryFile_WhenSaveFails()
+    {
+        using var sandbox = new TestDirectory();
+        var blockingDirectory = sandbox.CreateSubdirectory("blocking");
+        var destinationDirectory = sandbox.CreateSubdirectory("blocking/occupied-path");
+
+        var saveMethod = typeof(CustomCeService).GetMethod("SaveDocumentAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(saveMethod);
+
+        var task = saveMethod!.Invoke(null, [XDocument.Parse("<types />"), destinationDirectory, CancellationToken.None]) as Task;
+        Assert.NotNull(task);
+
+        await Assert.ThrowsAnyAsync<Exception>(async () => await task!);
+
+        Assert.False(File.Exists(destinationDirectory + ".tmp"));
+        Assert.True(Directory.Exists(destinationDirectory));
+    }
+
 }

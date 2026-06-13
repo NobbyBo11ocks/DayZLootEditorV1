@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace DayZLootForge.ViewModels;
+namespace DayZLootEditor.ViewModels;
 
 public abstract class ObservableObject : INotifyPropertyChanged
 {

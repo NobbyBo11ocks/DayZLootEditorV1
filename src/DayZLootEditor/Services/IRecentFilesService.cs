@@ -1,4 +1,4 @@
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public interface IRecentFilesService
 {

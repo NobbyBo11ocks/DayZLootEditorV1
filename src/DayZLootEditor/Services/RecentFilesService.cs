@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class RecentFilesService : IRecentFilesService
 {
@@ -107,7 +107,50 @@ public sealed class RecentFilesService : IRecentFilesService
         }
 
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_settingsPath, json);
+        var tempPath = Path.Combine(
+            directory ?? Path.GetDirectoryName(Path.GetFullPath(_settingsPath)) ?? Path.GetTempPath(),
+            $"{Path.GetFileName(_settingsPath)}.{Guid.NewGuid():N}.tmp");
+
+        File.WriteAllText(tempPath, json);
+
+        try
+        {
+            if (File.Exists(_settingsPath))
+            {
+                File.Replace(tempPath, _settingsPath, null);
+            }
+            else
+            {
+                File.Move(tempPath, _settingsPath);
+            }
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(_settingsPath))
+                {
+                    File.Delete(_settingsPath);
+                }
+
+                File.Move(tempPath, _settingsPath);
+            }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                    {
+                        File.Delete(tempPath);
+                    }
+                }
+                catch
+                {
+                }
+
+                throw;
+            }
+        }
     }
 
     private static void Update(List<string> values, string path)

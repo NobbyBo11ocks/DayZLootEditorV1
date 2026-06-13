@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace DayZLootForge.Models;
+namespace DayZLootEditor.Models;
 
 public sealed class EditorSnapshot
 {

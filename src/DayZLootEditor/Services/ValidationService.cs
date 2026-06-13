@@ -1,6 +1,6 @@
-using DayZLootForge.Models;
+using DayZLootEditor.Models;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class ValidationService : IValidationService
 {

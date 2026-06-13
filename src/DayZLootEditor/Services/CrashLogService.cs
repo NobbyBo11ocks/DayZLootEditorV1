@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public static class CrashLogService
 {

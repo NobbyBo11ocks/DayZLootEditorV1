@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using DayZLootForge.Models;
+using DayZLootEditor.Models;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class TextDiffService : ITextDiffService
 {

@@ -1,6 +1,6 @@
-using DayZLootForge.ViewModels;
+using DayZLootEditor.ViewModels;
 
-namespace DayZLootForge.Models;
+namespace DayZLootEditor.Models;
 
 public sealed class CustomCeFileEntry : ObservableObject
 {

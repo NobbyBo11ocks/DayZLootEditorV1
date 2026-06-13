@@ -1,4 +1,4 @@
-using DayZLootForge.Services;
+using DayZLootEditor.Services;
 
 namespace DayZLootEditor.Tests;
 

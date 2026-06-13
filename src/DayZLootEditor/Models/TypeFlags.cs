@@ -1,4 +1,4 @@
-namespace DayZLootForge.Models;
+namespace DayZLootEditor.Models;
 
 public sealed class TypeFlags
 {

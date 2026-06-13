@@ -1,5 +1,5 @@
-using DayZLootForge.Models;
-using DayZLootForge.Services;
+using DayZLootEditor.Models;
+using DayZLootEditor.Services;
 
 namespace DayZLootEditor.Tests;
 

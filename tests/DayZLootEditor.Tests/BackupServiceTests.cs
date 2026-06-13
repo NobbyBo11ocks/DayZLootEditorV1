@@ -1,4 +1,4 @@
-using DayZLootForge.Services;
+using DayZLootEditor.Services;
 
 namespace DayZLootEditor.Tests;
 
@@ -21,4 +21,24 @@ public sealed class BackupServiceTests
         Assert.True(File.Exists(first));
         Assert.True(File.Exists(second));
     }
+
+
+    [Fact]
+    public async Task CreateBackupAsync_CanReadSourceWhileAnotherReaderHasItOpen()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "DayZLootEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        var sourcePath = Path.Combine(tempDir, "types.xml");
+        await File.WriteAllTextAsync(sourcePath, "<types />");
+
+        using var readLock = File.Open(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+        var service = new BackupService();
+        var backupPath = await service.CreateBackupAsync(sourcePath);
+
+        Assert.True(File.Exists(backupPath));
+        Assert.Equal("<types />", await File.ReadAllTextAsync(backupPath));
+    }
+
 }

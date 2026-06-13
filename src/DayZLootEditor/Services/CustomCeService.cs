@@ -1,8 +1,8 @@
 using System.Xml;
 using System.Xml.Linq;
-using DayZLootForge.Models;
+using DayZLootEditor.Models;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class CustomCeService : ICustomCeService
 {
@@ -28,9 +28,10 @@ public sealed class CustomCeService : ICustomCeService
         fileName = NormalizeFileName(fileName);
         type = NormalizeType(type);
 
-        var fullPath = Path.Combine(missionFolder ?? string.Empty, folder, fileName);
+        var missionFolderPath = missionFolder ?? string.Empty;
+        var fullPath = Path.Combine(missionFolderPath, folder, fileName);
         var relativePath = CombineRelative(folder, fileName);
-        var economyCorePath = GetEconomyCorePath(missionFolder);
+        var economyCorePath = GetEconomyCorePath(missionFolderPath);
         var isRegistered = false;
 
         if (File.Exists(economyCorePath))
@@ -94,13 +95,14 @@ public sealed class CustomCeService : ICustomCeService
             return new CustomCeLoadResult(economyCorePath, entries, issues);
         }
 
-        if (!string.Equals(document.Root?.Name.LocalName, "economycore", StringComparison.OrdinalIgnoreCase))
+        var root = document.Root;
+        if (root is null || !string.Equals(root.Name.LocalName, "economycore", StringComparison.OrdinalIgnoreCase))
         {
             issues.Add(new ValidationIssue(ValidationSeverity.Error, "cfgeconomycore.xml", "Root element must be <economycore>."));
             return new CustomCeLoadResult(economyCorePath, entries, issues);
         }
 
-        foreach (var ce in document.Root.Elements().Where(element => element.Name.LocalName == "ce"))
+        foreach (var ce in root.Elements().Where(element => element.Name.LocalName == "ce"))
         {
             var folder = ce.Attribute("folder")?.Value?.Trim() ?? string.Empty;
             foreach (var file in ce.Elements().Where(element => element.Name.LocalName == "file"))
@@ -159,10 +161,34 @@ public sealed class CustomCeService : ICustomCeService
             root.Add(new XText(Environment.NewLine));
         }
 
-        var alreadyRegistered = ce.Elements().Any(element =>
-            element.Name.LocalName == "file" &&
-            string.Equals(element.Attribute("name")?.Value?.Trim(), fileName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(element.Attribute("type")?.Value?.Trim(), type, StringComparison.OrdinalIgnoreCase));
+        var existingRegistrations = root
+            .Elements()
+            .Where(element => element.Name.LocalName == "ce")
+            .SelectMany(element => element.Elements()
+                .Where(child => child.Name.LocalName == "file")
+                .Select(child => new
+                {
+                    Folder = element.Attribute("folder")?.Value?.Trim() ?? string.Empty,
+                    Name = child.Attribute("name")?.Value?.Trim() ?? string.Empty,
+                    Type = child.Attribute("type")?.Value?.Trim() ?? string.Empty
+                }))
+            .ToList();
+
+        var conflictingRegistration = existingRegistrations.FirstOrDefault(registration =>
+            string.Equals(registration.Folder, folder, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(registration.Name, fileName, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(registration.Type, type, StringComparison.OrdinalIgnoreCase));
+
+        if (conflictingRegistration is not null)
+        {
+            throw new InvalidOperationException(
+                $"The file '{CombineRelative(folder, fileName)}' is already registered as type '{conflictingRegistration.Type}'. Remove the conflicting registration before registering it as '{type}'.");
+        }
+
+        var alreadyRegistered = existingRegistrations.Any(registration =>
+            string.Equals(registration.Folder, folder, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(registration.Name, fileName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(registration.Type, type, StringComparison.OrdinalIgnoreCase));
 
         if (!alreadyRegistered)
         {
@@ -459,13 +485,32 @@ public sealed class CustomCeService : ICustomCeService
         };
 
         var temporaryPath = path + ".tmp";
-        await using (var stream = File.Open(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
-        await using (var writer = XmlWriter.Create(stream, settings))
-        {
-            await document.SaveAsync(writer, cancellationToken).ConfigureAwait(false);
-        }
 
-        File.Move(temporaryPath, path, overwrite: true);
+        try
+        {
+            await using (var stream = File.Open(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var writer = XmlWriter.Create(stream, settings))
+            {
+                await document.SaveAsync(writer, cancellationToken).ConfigureAwait(false);
+            }
+
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
     }
 
     private static async Task<CustomCeFileEntry> ValidateSingleEntryAsync(string missionFolder, string folder, string fileName, string type)

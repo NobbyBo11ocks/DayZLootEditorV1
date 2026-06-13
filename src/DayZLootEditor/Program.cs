@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Fonts.Inter;
 using System;
 
-namespace DayZLootForge;
+namespace DayZLootEditor;
 
 internal sealed class Program
 {

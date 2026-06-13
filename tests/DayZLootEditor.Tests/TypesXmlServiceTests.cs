@@ -1,6 +1,6 @@
 using System.Xml.Linq;
-using DayZLootForge.Models;
-using DayZLootForge.Services;
+using DayZLootEditor.Models;
+using DayZLootEditor.Services;
 
 namespace DayZLootEditor.Tests;
 
@@ -133,6 +133,35 @@ public sealed class TypesXmlServiceTests
         Assert.Single(document.Root!.Elements("type"));
     }
 
+
+
+    [Fact]
+    public async Task SaveAsync_CleansUpTemporaryFile_WhenReplacingTargetFails()
+    {
+        var tempDir = CreateTempDirectory();
+        var path = Path.Combine(tempDir, "types.xml");
+        Directory.CreateDirectory(path);
+
+        var service = new TypesXmlService();
+        var entries = new[]
+        {
+            new DayzTypeEntry
+            {
+                Name = "AKM",
+                Nominal = 1,
+                Min = 0,
+                Lifetime = 3600,
+                Restock = 0,
+                QuantMin = -1,
+                QuantMax = -1,
+                Cost = 100,
+                CountInMap = true
+            }
+        };
+
+        await Assert.ThrowsAnyAsync<Exception>(() => service.SaveAsync(path, entries));
+        Assert.False(File.Exists(path + ".tmp"));
+    }
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "DayZLootEditorTests", Guid.NewGuid().ToString("N"));

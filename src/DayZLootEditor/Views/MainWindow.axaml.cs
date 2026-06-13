@@ -2,9 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using DayZLootForge.ViewModels;
+using DayZLootEditor.ViewModels;
 
-namespace DayZLootForge.Views;
+namespace DayZLootEditor.Views;
 
 public partial class MainWindow : Window
 {

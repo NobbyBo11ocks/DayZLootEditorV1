@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Xml.Linq;
-using DayZLootForge.Models;
-using DayZLootForge.Services;
+using DayZLootEditor.Models;
+using DayZLootEditor.Services;
 
-namespace DayZLootForge.ViewModels;
+namespace DayZLootEditor.ViewModels;
 
 public sealed class TypesEditorViewModel : ObservableObject
 {
@@ -71,6 +71,8 @@ public sealed class TypesEditorViewModel : ObservableObject
     private XDocument? _loadedDocument;
     private CancellationTokenSource? _validationDebounceCts;
     private CancellationTokenSource? _filterDebounceCts;
+    private CancellationTokenSource? _customCeDiffCts;
+    private long _customCeDiffRequestVersion;
     private bool _suppressHistory;
     private bool _suspendEntryReactiveWork;
     private bool _historyDirty;
@@ -112,14 +114,14 @@ public sealed class TypesEditorViewModel : ObservableObject
 
         SelectedCustomCeFilter = CustomCeFilterOptions.FirstOrDefault() ?? "All";
         _hasCompletedFirstMissionLoad = _recentFilesService.GetHasCompletedFirstMissionLoad();
-        ActiveFeature = NormalizeWorkspace(_recentFilesService.GetLastWorkspace());
+        ActiveFeature = LootEditorFeature;
 
         OpenTypesFileCommand = new AsyncRelayCommand(OpenTypesFileAsync, () => !IsBusy, HandleUnhandledError);
         OpenMissionFolderCommand = new AsyncRelayCommand(OpenMissionFolderAsync, () => !IsBusy, HandleUnhandledError);
         UnloadLoadedFileCommand = new AsyncRelayCommand(UnloadLoadedFileAsync, () => !IsBusy && (HasWorkingFile || HasMissionFolder), HandleUnhandledError);
         SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy && Entries.Count > 0, HandleUnhandledError);
         SaveAsCommand = new AsyncRelayCommand(SaveAsAsync, () => !IsBusy && Entries.Count > 0, HandleUnhandledError);
-        ValidateCommand = new RelayCommand(Validate, () => !IsBusy);
+        ValidateCommand = new RelayCommand(() => Validate(updateStatusMessage: true), () => !IsBusy);
         ToggleQuickHelpCommand = new RelayCommand(ToggleQuickHelp);
         ToggleRecentAccessCommand = new RelayCommand(ToggleRecentAccess);
         AddEntryCommand = new RelayCommand(AddEntry, () => !IsBusy && HasWorkingFile);
@@ -135,7 +137,7 @@ public sealed class TypesEditorViewModel : ObservableObject
         ApplyProfileTemplateCommand = new RelayCommand(ApplyProfileTemplate, () => !IsBusy && FilteredEntries.Count > 0 && SelectedProfileTemplate is not null);
         UndoCommand = new RelayCommand(Undo, () => !IsBusy && _undoStack.Count > 0);
         RedoCommand = new RelayCommand(Redo, () => !IsBusy && _redoStack.Count > 0);
-        GenerateSavePreviewCommand = new RelayCommand(GenerateSavePreview, () => !IsBusy && Entries.Count > 0);
+        GenerateSavePreviewCommand = new AsyncRelayCommand(GenerateSavePreviewAsync, () => !IsBusy && Entries.Count > 0, HandleUnhandledError);
         OpenSelectedRecentTypesFileCommand = new AsyncRelayCommand(OpenSelectedRecentTypesFileAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(SelectedRecentTypesFile), HandleUnhandledError);
         OpenSelectedRecentMissionFolderCommand = new AsyncRelayCommand(OpenSelectedRecentMissionFolderAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(SelectedRecentMissionFolder), HandleUnhandledError);
 
@@ -202,7 +204,7 @@ public sealed class TypesEditorViewModel : ObservableObject
     public RelayCommand ApplyProfileTemplateCommand { get; }
     public RelayCommand UndoCommand { get; }
     public RelayCommand RedoCommand { get; }
-    public RelayCommand GenerateSavePreviewCommand { get; }
+    public AsyncRelayCommand GenerateSavePreviewCommand { get; }
     public AsyncRelayCommand OpenSelectedRecentTypesFileCommand { get; }
     public AsyncRelayCommand OpenSelectedRecentMissionFolderCommand { get; }
     public RelayCommand ShowLootEditorCommand { get; }
@@ -884,12 +886,33 @@ public sealed class TypesEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSavePreviewEmpty));
     }
 
+    private async Task<bool> ConfirmReplaceCurrentSessionAsync(string actionName)
+    {
+        if (!HasUnsavedChanges)
+        {
+            return true;
+        }
+
+        var shouldDiscard = await _fileDialogService.ConfirmDiscardChangesAsync(
+            actionName,
+            "You have unsaved changes in the loaded loot file. Continue and discard those changes?").ConfigureAwait(true);
+
+        if (!shouldDiscard)
+        {
+            StatusMessage = $"{actionName} cancelled. The current loot file is still loaded.";
+            return false;
+        }
+
+        return true;
+    }
+
     private async Task OpenTypesFileAsync()
     {
         try
         {
             var path = await _fileDialogService.PickTypesFileAsync().ConfigureAwait(true);
-            if (!string.IsNullOrWhiteSpace(path))
+            if (!string.IsNullOrWhiteSpace(path) &&
+                await ConfirmReplaceCurrentSessionAsync("Open File").ConfigureAwait(true))
             {
                 await LoadFileAsync(path).ConfigureAwait(true);
                 ActiveFeature = LootEditorFeature;
@@ -911,6 +934,11 @@ public sealed class TypesEditorViewModel : ObservableObject
                 return;
             }
 
+            if (!await ConfirmReplaceCurrentSessionAsync("Open Mission Folder").ConfigureAwait(true))
+            {
+                return;
+            }
+
             await OpenMissionFolderPathAsync(folder).ConfigureAwait(true);
         }
         catch (Exception ex)
@@ -926,6 +954,11 @@ public sealed class TypesEditorViewModel : ObservableObject
             return;
         }
 
+        if (!await ConfirmReplaceCurrentSessionAsync("Open Recent File").ConfigureAwait(true))
+        {
+            return;
+        }
+
         await LoadFileAsync(SelectedRecentTypesFile).ConfigureAwait(true);
         ActiveFeature = LootEditorFeature;
     }
@@ -933,6 +966,11 @@ public sealed class TypesEditorViewModel : ObservableObject
     private async Task OpenSelectedRecentMissionFolderAsync()
     {
         if (string.IsNullOrWhiteSpace(SelectedRecentMissionFolder))
+        {
+            return;
+        }
+
+        if (!await ConfirmReplaceCurrentSessionAsync("Open Recent Mission Folder").ConfigureAwait(true))
         {
             return;
         }
@@ -1004,6 +1042,12 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            if (HasWorkingFile)
+            {
+                StatusMessage = $"Load failed: {ex.Message}. The current loot file is still loaded.";
+                return;
+            }
+
             var fallbackMissionFolder = ResolveMissionFolder(path, preferredMissionFolder ?? MissionFolder);
             ClearLoadedFileState(fallbackMissionFolder, $"Load failed: {ex.Message}");
         }
@@ -1092,9 +1136,17 @@ public sealed class TypesEditorViewModel : ObservableObject
             }
 
             string? backupPath = null;
+            string? backupFailureMessage = null;
             if (AutoBackup && File.Exists(path))
             {
-                backupPath = await _backupService.CreateBackupAsync(path).ConfigureAwait(true);
+                try
+                {
+                    backupPath = await _backupService.CreateBackupAsync(path).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    backupFailureMessage = ex.Message;
+                }
             }
 
             await _typesXmlService.SaveAsync(path, Entries, _loadedDocument).ConfigureAwait(true);
@@ -1119,9 +1171,13 @@ public sealed class TypesEditorViewModel : ObservableObject
             CaptureSnapshot(clearHistory: true);
             GenerateSavePreview();
 
-            StatusMessage = backupPath is null
+            var saveMessage = backupPath is null
                 ? $"Saved {Entries.Count:N0} entries to {Path.GetFileName(path)}."
                 : $"Saved {Entries.Count:N0} entries. Backup created: {Path.GetFileName(backupPath)}.";
+
+            StatusMessage = string.IsNullOrWhiteSpace(backupFailureMessage)
+                ? saveMessage
+                : $"{saveMessage} Backup failed: {backupFailureMessage}";
         }
         catch (Exception ex)
         {
@@ -1134,7 +1190,7 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
     }
 
-    private void Validate()
+    private void Validate(bool updateStatusMessage = false)
     {
         ValidationIssues.Clear();
 
@@ -1144,7 +1200,11 @@ public sealed class TypesEditorViewModel : ObservableObject
             WarningCount = 0;
             InfoCount = 0;
             ValidationSummary = "No file loaded yet. Open a mission folder or types.xml first.";
-            StatusMessage = "Open a mission folder or types.xml to begin.";
+            if (updateStatusMessage)
+            {
+                StatusMessage = "Open a mission folder or types.xml to begin.";
+            }
+
             ApplyFilters();
             return;
         }
@@ -1163,17 +1223,26 @@ public sealed class TypesEditorViewModel : ObservableObject
         if (ErrorCount == 0 && WarningCount == 0 && InfoCount == 0)
         {
             ValidationSummary = "No problems found. This file is ready to save.";
-            StatusMessage = "Validation complete: no problems found.";
+            if (updateStatusMessage)
+            {
+                StatusMessage = "Validation complete: no problems found.";
+            }
         }
         else if (ErrorCount > 0)
         {
             ValidationSummary = $"Fix {ErrorCount:N0} problem(s) before saving.";
-            StatusMessage = $"Validation found {ErrorCount:N0} problem(s). Fix them before saving.";
+            if (updateStatusMessage)
+            {
+                StatusMessage = $"Validation found {ErrorCount:N0} problem(s). Fix them before saving.";
+            }
         }
         else
         {
             ValidationSummary = $"Review {WarningCount + InfoCount:N0} note(s). Saving is allowed.";
-            StatusMessage = $"Validation complete: {WarningCount + InfoCount:N0} note(s).";
+            if (updateStatusMessage)
+            {
+                StatusMessage = $"Validation complete: {WarningCount + InfoCount:N0} note(s).";
+            }
         }
     }
 
@@ -1409,7 +1478,13 @@ public sealed class TypesEditorViewModel : ObservableObject
         StatusMessage = "Redo complete.";
     }
 
+
     private void GenerateSavePreview()
+    {
+        _ = GenerateSavePreviewAsync();
+    }
+
+    private async Task GenerateSavePreviewAsync()
     {
         try
         {
@@ -1419,13 +1494,23 @@ public sealed class TypesEditorViewModel : ObservableObject
                 return;
             }
 
-            var updatedXml = _typesXmlService.BuildPreviewXml(Entries, _loadedDocument);
-            var originalText = string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath)
-                ? string.Empty
-                : File.ReadAllText(FilePath);
-            var friendlyPreview = _textDiffService.BuildFriendlyDiff(originalText, updatedXml);
-            var rawPreview = _textDiffService.BuildLineDiff(originalText, updatedXml, "Save Preview");
-            ApplySavePreview(friendlyPreview, rawPreview);
+            var filePath = FilePath;
+            var loadedDocument = _loadedDocument;
+            var entrySnapshots = Entries.ToList();
+
+            var preview = await Task.Run(async () =>
+            {
+                var updatedXml = _typesXmlService.BuildPreviewXml(entrySnapshots, loadedDocument);
+                var originalText = string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)
+                    ? string.Empty
+                    : await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
+
+                var friendlyPreview = _textDiffService.BuildFriendlyDiff(originalText, updatedXml);
+                var rawPreview = _textDiffService.BuildLineDiff(originalText, updatedXml, "Save Preview");
+                return (friendlyPreview, rawPreview);
+            }).ConfigureAwait(true);
+
+            ApplySavePreview(preview.friendlyPreview, preview.rawPreview);
         }
         catch (Exception ex)
         {
@@ -1660,36 +1745,58 @@ public sealed class TypesEditorViewModel : ObservableObject
 
     private async Task RefreshSelectedCustomCeDiffAsync()
     {
+        var selection = SelectedCustomCeFile!;
+        var requestVersion = Interlocked.Increment(ref _customCeDiffRequestVersion);
+
+        _customCeDiffCts?.Cancel();
+        _customCeDiffCts?.Dispose();
+        _customCeDiffCts = new CancellationTokenSource();
+        var cancellationToken = _customCeDiffCts.Token;
+
         ReplaceCollection(CustomCeRepairDiffSections, Array.Empty<SaveDiffSection>());
         OnPropertyChanged(nameof(HasCustomCeRepairDiff));
         OnPropertyChanged(nameof(IsCustomCeRepairDiffEmpty));
 
-        if (SelectedCustomCeFile is null)
+        if (selection is null)
         {
             CustomCeRepairDiffSummary = "Select a custom CE file to preview root-fix changes before running repair.";
             return;
         }
 
-        if (!File.Exists(SelectedCustomCeFile.FullPath))
+        if (!File.Exists(selection.FullPath))
         {
             CustomCeRepairDiffSummary = "This file is missing on disk, so there is no XML diff to preview yet.";
             return;
         }
 
-        if (!TryGetExpectedCustomCeRootName(SelectedCustomCeFile.Type, out var expectedRootName))
+        if (!TryGetExpectedCustomCeRootName(selection.Type, out var expectedRootName))
         {
-            CustomCeRepairDiffSummary = $"Type '{SelectedCustomCeFile.Type}' is not supported for repair diff preview.";
+            CustomCeRepairDiffSummary = $"Type '{selection.Type}' is not supported for repair diff preview.";
             return;
         }
 
         string originalText;
         try
         {
-            originalText = await File.ReadAllTextAsync(SelectedCustomCeFile.FullPath).ConfigureAwait(true);
+            originalText = await File.ReadAllTextAsync(selection.FullPath, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
+            if (!IsLatestCustomCeDiffRequest(requestVersion, selection))
+            {
+                return;
+            }
+
             CustomCeRepairDiffSummary = $"Could not read the selected custom CE file: {ex.Message}";
+            return;
+        }
+
+        if (!IsLatestCustomCeDiffRequest(requestVersion, selection))
+        {
             return;
         }
 
@@ -1701,35 +1808,59 @@ public sealed class TypesEditorViewModel : ObservableObject
 
         try
         {
-            var document = XDocument.Parse(originalText, LoadOptions.PreserveWhitespace);
-            var actualRootName = document.Root?.Name.LocalName ?? string.Empty;
-            if (string.Equals(actualRootName, expectedRootName, StringComparison.OrdinalIgnoreCase))
+            var preview = await Task.Run(() =>
             {
-                CustomCeRepairDiffSummary = $"Root is already valid (<{expectedRootName}>). Repair would not change this file.";
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var document = XDocument.Parse(originalText, LoadOptions.PreserveWhitespace);
+                var actualRootName = document.Root?.Name.LocalName ?? string.Empty;
+                if (string.Equals(actualRootName, expectedRootName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (sections: Array.Empty<SaveDiffSection>(), summary: $"Root is already valid (<{expectedRootName}>). Repair would not change this file.");
+                }
+
+                if (document.Root is null)
+                {
+                    return (sections: Array.Empty<SaveDiffSection>(), summary: "The selected XML file does not have a root element, so a repair diff cannot be previewed safely.");
+                }
+
+                document.Root.Name = expectedRootName;
+                var updatedText = document.Declaration is null
+                    ? document.ToString()
+                    : document.Declaration + Environment.NewLine + document.ToString();
+
+                var diff = _textDiffService.BuildFriendlyDiff(originalText, updatedText);
+                return (sections: diff.Sections.ToArray(), summary: $"Repair preview for {selection.RelativePath}: {diff.Summary}");
+            }, cancellationToken).ConfigureAwait(true);
+
+            if (!IsLatestCustomCeDiffRequest(requestVersion, selection))
+            {
                 return;
             }
 
-            if (document.Root is null)
-            {
-                CustomCeRepairDiffSummary = "The selected XML file does not have a root element, so a repair diff cannot be previewed safely.";
-                return;
-            }
-
-            document.Root.Name = expectedRootName;
-            var updatedText = document.Declaration is null
-                ? document.ToString()
-                : document.Declaration + Environment.NewLine + document.ToString();
-
-            var preview = _textDiffService.BuildFriendlyDiff(originalText, updatedText);
-            ReplaceCollection(CustomCeRepairDiffSections, preview.Sections);
-            CustomCeRepairDiffSummary = $"Repair preview for {SelectedCustomCeFile.RelativePath}: {preview.Summary}";
+            ReplaceCollection(CustomCeRepairDiffSections, preview.sections);
+            CustomCeRepairDiffSummary = preview.summary;
             OnPropertyChanged(nameof(HasCustomCeRepairDiff));
             OnPropertyChanged(nameof(IsCustomCeRepairDiffEmpty));
         }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex) when (ex is System.Xml.XmlException or InvalidOperationException)
         {
+            if (!IsLatestCustomCeDiffRequest(requestVersion, selection))
+            {
+                return;
+            }
+
             CustomCeRepairDiffSummary = $"Cannot preview repair diff because the XML is malformed: {ex.Message}";
         }
+    }
+
+    private bool IsLatestCustomCeDiffRequest(long requestVersion, CustomCeFileEntry selection)
+    {
+        return requestVersion == Interlocked.Read(ref _customCeDiffRequestVersion)
+            && ReferenceEquals(SelectedCustomCeFile, selection);
     }
 
     private static bool TryGetExpectedCustomCeRootName(string type, out string rootName)
@@ -1783,6 +1914,11 @@ public sealed class TypesEditorViewModel : ObservableObject
             return;
         }
 
+        if (!await ConfirmReplaceCurrentSessionAsync("Open Custom Types").ConfigureAwait(true))
+        {
+            return;
+        }
+
         await LoadFileAsync(SelectedCustomCeFile.FullPath, MissionFolder).ConfigureAwait(true);
         if (HasWorkingFile && string.Equals(FilePath, SelectedCustomCeFile.FullPath, StringComparison.OrdinalIgnoreCase))
         {
@@ -1818,17 +1954,26 @@ private async Task RemoveSelectedCustomCeAsync(bool deleteFile)
     try
     {
         IsBusy = true;
+        var selection = SelectedCustomCeFile!;
         var economyCorePath = _customCeService.GetEconomyCorePath(MissionFolder);
+        string? economyCoreBackupPath = null;
+        string? customCeBackupPath = null;
+
         if (AutoBackup && File.Exists(economyCorePath))
         {
-            await _backupService.CreateBackupAsync(economyCorePath).ConfigureAwait(true);
+            economyCoreBackupPath = await _backupService.CreateBackupAsync(economyCorePath).ConfigureAwait(true);
+        }
+
+        if (deleteFile && AutoBackup && File.Exists(selection.FullPath))
+        {
+            customCeBackupPath = await _backupService.CreateBackupAsync(selection.FullPath).ConfigureAwait(true);
         }
 
         var removed = await _customCeService.UnregisterFileAsync(
             MissionFolder,
-            SelectedCustomCeFile.Folder,
-            SelectedCustomCeFile.FileName,
-            SelectedCustomCeFile.Type,
+            selection.Folder,
+            selection.FileName,
+            selection.Type,
             deleteFile).ConfigureAwait(true);
 
         if (!removed)
@@ -1837,12 +1982,30 @@ private async Task RemoveSelectedCustomCeAsync(bool deleteFile)
             return;
         }
 
-        var relativePath = SelectedCustomCeFile.RelativePath;
+        var relativePath = selection.RelativePath;
+        var removedLoadedFile = deleteFile &&
+            HasWorkingFile &&
+            string.Equals(FilePath, selection.FullPath, StringComparison.OrdinalIgnoreCase);
+
         await LoadCustomCeFilesAsync().ConfigureAwait(true);
         SelectedCustomCeFile = CustomCeFiles.FirstOrDefault();
+
+        if (removedLoadedFile)
+        {
+            ClearLoadedFileState(MissionFolder, $"Removed {relativePath} from cfgeconomycore.xml, deleted the XML file, and unloaded it from the editor.");
+        }
+
         CustomCeStatus = deleteFile
-            ? $"Removed {relativePath} from cfgeconomycore.xml and deleted the XML file."
-            : $"Removed {relativePath} from cfgeconomycore.xml. The XML file was kept on disk.";
+            ? customCeBackupPath is null
+                ? removedLoadedFile
+                    ? $"Removed {relativePath} from cfgeconomycore.xml, deleted the XML file, and unloaded it from the editor."
+                    : $"Removed {relativePath} from cfgeconomycore.xml and deleted the XML file."
+                : removedLoadedFile
+                    ? $"Removed {relativePath} from cfgeconomycore.xml, deleted the XML file, and unloaded it from the editor. Backup created: {Path.GetFileName(customCeBackupPath)}."
+                    : $"Removed {relativePath} from cfgeconomycore.xml and deleted the XML file. Backup created: {Path.GetFileName(customCeBackupPath)}."
+            : economyCoreBackupPath is null
+                ? $"Removed {relativePath} from cfgeconomycore.xml. The XML file was kept on disk."
+                : $"Removed {relativePath} from cfgeconomycore.xml. The XML file was kept on disk. Backup created: {Path.GetFileName(economyCoreBackupPath)}.";
     }
     catch (Exception ex)
     {

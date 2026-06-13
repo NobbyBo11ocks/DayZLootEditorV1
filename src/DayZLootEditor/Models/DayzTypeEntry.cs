@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
-using DayZLootForge.ViewModels;
+using DayZLootEditor.ViewModels;
 
-namespace DayZLootForge.Models;
+namespace DayZLootEditor.Models;
 
 public sealed class DayzTypeEntry : ObservableObject
 {

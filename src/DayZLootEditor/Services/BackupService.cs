@@ -1,4 +1,4 @@
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class BackupService : IBackupService
 {
@@ -16,7 +16,7 @@ public sealed class BackupService : IBackupService
 
         var sourceDirectory = Path.GetDirectoryName(sourcePath)
             ?? throw new InvalidOperationException("Cannot determine the source directory.");
-        var backupDirectory = Path.Combine(sourceDirectory, "DayZLootForgeBackups");
+        var backupDirectory = Path.Combine(sourceDirectory, "DayZLootEditorBackups");
         Directory.CreateDirectory(backupDirectory);
 
         var stamp = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss-fff");
@@ -25,7 +25,7 @@ public sealed class BackupService : IBackupService
         var extension = Path.GetExtension(sourcePath);
         var backupPath = Path.Combine(backupDirectory, $"{fileName}.{stamp}.{uniqueSuffix}{extension}.bak");
 
-        await using var source = File.Open(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var source = File.Open(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         await using var destination = File.Open(backupPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
 

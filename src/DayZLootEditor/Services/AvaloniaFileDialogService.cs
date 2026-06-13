@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class AvaloniaFileDialogService : IFileDialogService
 {

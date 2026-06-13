@@ -1,7 +1,7 @@
 using System.Xml.Linq;
-using DayZLootForge.Models;
+using DayZLootEditor.Models;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed record TypesFileLoadResult(string Path, IReadOnlyList<DayzTypeEntry> Entries, XDocument SourceDocument);
 

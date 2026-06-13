@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Windows.Input;
 
-namespace DayZLootForge.ViewModels;
+namespace DayZLootEditor.ViewModels;
 
 public sealed class RelayCommand : ICommand
 {

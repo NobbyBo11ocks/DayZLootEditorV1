@@ -2,12 +2,12 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
-using DayZLootForge.Services;
-using DayZLootForge.ViewModels;
-using DayZLootForge.Views;
+using DayZLootEditor.Services;
+using DayZLootEditor.ViewModels;
+using DayZLootEditor.Views;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DayZLootForge;
+namespace DayZLootEditor;
 
 public partial class App : Application
 {
@@ -36,6 +36,7 @@ public partial class App : Application
             }
 
             desktop.MainWindow = mainWindow;
+            desktop.Exit += (_, _) => _services?.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -86,8 +87,22 @@ public partial class App : Application
 
         Dispatcher.UIThread.UnhandledException += (_, args) =>
         {
-            CrashLogService.LogException("Dispatcher.UIThread.UnhandledException", args.Exception);
+            var logPath = CrashLogService.LogException("Dispatcher.UIThread.UnhandledException", args.Exception);
+            CrashLogService.LogMessage(
+                "Dispatcher.UIThread.UnhandledException",
+                $"Application shutdown triggered after fatal UI exception. Crash log: {logPath}");
+
             args.Handled = true;
+
+            if (Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.Shutdown(-1);
+                return;
+            }
+
+            Environment.FailFast(
+                $"A fatal UI thread exception occurred. See crash log: {logPath}",
+                args.Exception);
         };
     }
 }

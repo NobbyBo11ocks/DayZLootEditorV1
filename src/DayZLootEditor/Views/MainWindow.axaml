@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="DayZLootForge.Views.MainWindow"
+        x:Class="DayZLootEditor.Views.MainWindow"
         Title="DayZ Loot Editor - Loot &amp; CE Manager"
         Width="1600"
         Height="900"

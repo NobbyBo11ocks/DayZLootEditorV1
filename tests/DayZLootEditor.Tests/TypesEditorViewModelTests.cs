@@ -1,7 +1,7 @@
 
 using System.Reflection;
-using DayZLootForge.Services;
-using DayZLootForge.ViewModels;
+using DayZLootEditor.Services;
+using DayZLootEditor.ViewModels;
 
 namespace DayZLootEditor.Tests;
 
@@ -149,16 +149,19 @@ public sealed class TypesEditorViewModelTests
     }
 
 
-    private static TypesEditorViewModel CreateViewModel()
+    private static TypesEditorViewModel CreateViewModel(
+        IRecentFilesService? recentFilesService = null,
+        IFileDialogService? fileDialogService = null,
+        IBackupService? backupService = null)
     {
         return new TypesEditorViewModel(
-            new StubFileDialogService(),
+            fileDialogService ?? new StubFileDialogService(),
             new TypesXmlService(),
             new ValidationService(),
-            new BackupService(),
+            backupService ?? new BackupService(),
             new CustomCeService(),
             new LootProfileService(),
-            new RecentFilesService(),
+            recentFilesService ?? new RecentFilesService(),
             new TextDiffService());
     }
 
@@ -175,7 +178,23 @@ public sealed class TypesEditorViewModelTests
 
 
     [Fact]
-    public async Task LoadFileAsync_ClearsStaleState_WhenNewFileIsMalformed()
+    public async Task Constructor_DefaultsToLootEditorWorkspace_EvenWhenRecentWorkspaceWasCustomCe()
+    {
+        using var sandbox = new TestDirectory();
+        var settingsPath = Path.Combine(sandbox.Root, "recent-files.json");
+        var recentFilesService = new RecentFilesService(settingsPath);
+        await recentFilesService.SetLastWorkspaceAsync("Custom CE Files");
+
+        var viewModel = CreateViewModel(recentFilesService);
+
+        Assert.Equal("Loot Editor", viewModel.ActiveFeature);
+        Assert.True(viewModel.IsLootEditorVisible);
+        Assert.False(viewModel.IsCustomCeVisible);
+    }
+
+
+    [Fact]
+    public async Task LoadFileAsync_PreservesCurrentState_WhenNewFileIsMalformed()
     {
         using var sandbox = new TestDirectory();
         var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
@@ -192,13 +211,17 @@ public sealed class TypesEditorViewModelTests
         Assert.True(viewModel.HasWorkingFile);
         Assert.NotEmpty(viewModel.Entries);
 
+        var originalFilePath = viewModel.FilePath;
+        var originalMissionFolder = viewModel.MissionFolder;
+        var originalEntryCount = viewModel.Entries.Count;
+
         await InvokePrivateAsync(viewModel, "LoadFileAsync", badPath, missionFolder);
 
-        Assert.False(viewModel.HasWorkingFile);
-        Assert.Empty(viewModel.FilePath);
-        Assert.Empty(viewModel.Entries);
-        Assert.Equal(missionFolder, viewModel.MissionFolder);
-        Assert.Contains("Load failed", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.True(viewModel.HasWorkingFile);
+        Assert.Equal(originalFilePath, viewModel.FilePath);
+        Assert.Equal(originalMissionFolder, viewModel.MissionFolder);
+        Assert.Equal(originalEntryCount, viewModel.Entries.Count);
+        Assert.Contains("current loot file is still loaded", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -252,7 +275,7 @@ public sealed class TypesEditorViewModelTests
 
         await InvokePrivateAsync(viewModel, "RepairSelectedCustomCeAsync");
 
-        var backupDirectory = Path.Combine(missionFolder, "modtypes", "DayZLootForgeBackups");
+        var backupDirectory = Path.Combine(missionFolder, "modtypes", "DayZLootEditorBackups");
         Assert.True(Directory.Exists(backupDirectory));
         Assert.NotEmpty(Directory.GetFiles(backupDirectory, "*.bak"));
         Assert.Contains("Backup created", viewModel.CustomCeStatus, StringComparison.OrdinalIgnoreCase);
@@ -312,6 +335,91 @@ public sealed class TypesEditorViewModelTests
         Assert.Contains("cancelled", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+
+    [Fact]
+    public async Task OpenSelectedRecentTypesFileAsync_Cancels_WhenDiscardIsRejected()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "db"));
+        await File.WriteAllTextAsync(Path.Combine(missionFolder, "cfgeconomycore.xml"), "<economycore />");
+        var firstPath = Path.Combine(missionFolder, "db", "types.xml");
+        var secondPath = Path.Combine(missionFolder, "db", "types_alt.xml");
+        await File.WriteAllTextAsync(firstPath, SampleTypesXml);
+        await File.WriteAllTextAsync(secondPath, SampleTypesXml.Replace("AKM", "M4A1", StringComparison.Ordinal));
+
+        var viewModel = new TypesEditorViewModel(
+            new StubFileDialogService(confirmDiscardChanges: false),
+            new TypesXmlService(),
+            new ValidationService(),
+            new BackupService(),
+            new CustomCeService(),
+            new LootProfileService(),
+            new RecentFilesService(),
+            new TextDiffService());
+
+        await InvokePrivateAsync(viewModel, "LoadFileAsync", firstPath, missionFolder);
+        viewModel.Entries[0].Nominal += 1;
+        viewModel.SelectedRecentTypesFile = secondPath;
+
+        await InvokePrivateAsync(viewModel, "OpenSelectedRecentTypesFileAsync");
+
+        Assert.Equal(firstPath, viewModel.FilePath);
+        Assert.Equal("AKM", viewModel.Entries[0].Name);
+        Assert.Contains("cancelled", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task OpenSelectedRecentMissionFolderAsync_Cancels_WhenDiscardIsRejected()
+    {
+        using var sandbox = new TestDirectory();
+        var missionA = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        var missionB = sandbox.CreateSubdirectory("mpmissions/livonia");
+        Directory.CreateDirectory(Path.Combine(missionA, "db"));
+        Directory.CreateDirectory(Path.Combine(missionB, "db"));
+        await File.WriteAllTextAsync(Path.Combine(missionA, "cfgeconomycore.xml"), "<economycore />");
+        await File.WriteAllTextAsync(Path.Combine(missionB, "cfgeconomycore.xml"), "<economycore />");
+        await File.WriteAllTextAsync(Path.Combine(missionA, "db", "types.xml"), SampleTypesXml);
+        await File.WriteAllTextAsync(Path.Combine(missionB, "db", "types.xml"), SampleTypesXml.Replace("AKM", "M4A1", StringComparison.Ordinal));
+
+        var viewModel = new TypesEditorViewModel(
+            new StubFileDialogService(confirmDiscardChanges: false),
+            new TypesXmlService(),
+            new ValidationService(),
+            new BackupService(),
+            new CustomCeService(),
+            new LootProfileService(),
+            new RecentFilesService(),
+            new TextDiffService());
+
+        await InvokePrivateAsync(viewModel, "OpenMissionFolderPathAsync", missionA);
+        viewModel.Entries[0].Nominal += 1;
+        viewModel.SelectedRecentMissionFolder = missionB;
+
+        await InvokePrivateAsync(viewModel, "OpenSelectedRecentMissionFolderAsync");
+
+        Assert.Equal(missionA, viewModel.MissionFolder);
+        Assert.Equal(Path.Combine(missionA, "db", "types.xml"), viewModel.FilePath);
+        Assert.Equal("AKM", viewModel.Entries[0].Name);
+        Assert.Contains("cancelled", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+
+
+    [Fact]
+    public async Task AutomaticValidation_DoesNotOverwriteActionStatusMessage()
+    {
+        using var sandbox = new TestDirectory();
+        var path = Path.Combine(sandbox.Root, "types.xml");
+        await File.WriteAllTextAsync(path, SampleTypesXml);
+
+        var viewModel = CreateViewModel();
+        await InvokePrivateAsync(viewModel, "LoadFileAsync", path, sandbox.Root);
+
+        viewModel.AddEntryCommand.Execute(null);
+
+        Assert.Contains("Added", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
     private const string SampleTypesXml = """
 <?xml version="1.0" encoding="UTF-8"?>
 <types>
@@ -328,24 +436,113 @@ public sealed class TypesEditorViewModelTests
 </types>
 """;
 
+
+    [Fact]
+    public async Task SaveBeforeCloseAsync_SavesChanges_WhenSaveAsPathIsProvided()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "db"));
+        await File.WriteAllTextAsync(Path.Combine(missionFolder, "cfgeconomycore.xml"), "<economycore />");
+        var sourcePath = Path.Combine(missionFolder, "db", "types.xml");
+        var savePath = Path.Combine(missionFolder, "db", "types_saved.xml");
+        await File.WriteAllTextAsync(sourcePath, SampleTypesXml);
+
+        var viewModel = CreateViewModel(fileDialogService: new StubFileDialogService(saveTypesPath: savePath));
+
+        await InvokePrivateAsync(viewModel, "LoadFileAsync", sourcePath, missionFolder);
+        viewModel.Entries[0].Nominal += 1;
+        typeof(TypesEditorViewModel).GetProperty("FilePath")!.SetValue(viewModel, string.Empty);
+
+        var saved = await viewModel.SaveBeforeCloseAsync();
+
+        Assert.True(saved);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Equal(savePath, viewModel.FilePath);
+        Assert.True(File.Exists(savePath));
+        Assert.Contains("Saved", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveBeforeCloseAsync_ReturnsFalse_WhenSaveAsIsCancelled()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "db"));
+        await File.WriteAllTextAsync(Path.Combine(missionFolder, "cfgeconomycore.xml"), "<economycore />");
+        var sourcePath = Path.Combine(missionFolder, "db", "types.xml");
+        await File.WriteAllTextAsync(sourcePath, SampleTypesXml);
+
+        var viewModel = CreateViewModel(fileDialogService: new StubFileDialogService(saveTypesPath: null));
+        await InvokePrivateAsync(viewModel, "LoadFileAsync", sourcePath, missionFolder);
+        viewModel.Entries[0].Nominal += 1;
+        typeof(TypesEditorViewModel).GetProperty("FilePath")!.SetValue(viewModel, string.Empty);
+
+        var saved = await viewModel.SaveBeforeCloseAsync();
+
+        Assert.False(saved);
+        Assert.True(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task SaveAsync_PersistsChanges_WhenBackupCreationFails()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "db"));
+        await File.WriteAllTextAsync(Path.Combine(missionFolder, "cfgeconomycore.xml"), "<economycore />");
+        var sourcePath = Path.Combine(missionFolder, "db", "types.xml");
+        await File.WriteAllTextAsync(sourcePath, SampleTypesXml);
+
+        var viewModel = CreateViewModel(backupService: new ThrowingBackupService("backup device offline"));
+        await InvokePrivateAsync(viewModel, "LoadFileAsync", sourcePath, missionFolder);
+        viewModel.Entries[0].Nominal = 42;
+
+        await InvokePrivateAsync(viewModel, "SaveAsync");
+
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Contains("Backup failed", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("backup device offline", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<nominal>42</nominal>", await File.ReadAllTextAsync(sourcePath), StringComparison.Ordinal);
+    }
+
     private sealed class StubFileDialogService : IFileDialogService
     {
         private readonly bool _confirmDiscardChanges;
+        private readonly string? _saveTypesPath;
 
-        public StubFileDialogService(bool confirmDiscardChanges = true)
+        public StubFileDialogService(bool confirmDiscardChanges = true, string? saveTypesPath = null)
         {
             _confirmDiscardChanges = confirmDiscardChanges;
+            _saveTypesPath = saveTypesPath;
         }
 
         public Task<string?> PickTypesFileAsync() => Task.FromResult<string?>(null);
         public Task<string?> PickMissionFolderAsync() => Task.FromResult<string?>(null);
-        public Task<string?> PickSaveTypesPathAsync(string suggestedFileName) => Task.FromResult<string?>(null);
+        public Task<string?> PickSaveTypesPathAsync(string suggestedFileName) => Task.FromResult(_saveTypesPath);
         public Task<bool> ConfirmDiscardChangesAsync(string title, string message) => Task.FromResult(_confirmDiscardChanges);
+    }
+
+    private sealed class ThrowingBackupService : IBackupService
+    {
+        private readonly string _message;
+
+        public ThrowingBackupService(string message)
+        {
+            _message = message;
+        }
+
+        public Task<string> CreateBackupAsync(string sourcePath, CancellationToken cancellationToken = default)
+        {
+            throw new IOException(_message);
+        }
     }
 
     private sealed class TestDirectory : IDisposable
     {
         private readonly string _root = Path.Combine(Path.GetTempPath(), "DayZLootEditorTests", Guid.NewGuid().ToString("N"));
+
+        public string Root => _root;
 
         public TestDirectory()
         {
@@ -367,4 +564,42 @@ public sealed class TypesEditorViewModelTests
             }
         }
     }
+
+
+    [Fact]
+    public async Task DeleteSelectedCustomCeAsync_UnloadsEditorWhenDeletedFileIsCurrentlyOpen()
+    {
+        using var sandbox = new TestDirectory();
+        var missionFolder = sandbox.CreateSubdirectory("mpmissions/chernarusplus");
+        Directory.CreateDirectory(Path.Combine(missionFolder, "modtypes"));
+        await File.WriteAllTextAsync(Path.Combine(missionFolder, "cfgeconomycore.xml"), """
+<economycore>
+    <ce folder="modtypes">
+        <file name="types_custom.xml" type="types" />
+    </ce>
+</economycore>
+""");
+        var customTypesPath = Path.Combine(missionFolder, "modtypes", "types_custom.xml");
+        await File.WriteAllTextAsync(customTypesPath, SampleTypesXml);
+
+        var viewModel = CreateViewModel();
+        await InvokePrivateAsync(viewModel, "OpenMissionFolderPathAsync", missionFolder);
+        await InvokePrivateAsync(viewModel, "RefreshCustomCeAsync");
+        viewModel.SelectedCustomCeFile = Assert.Single(viewModel.CustomCeFiles);
+
+        await InvokePrivateAsync(viewModel, "OpenSelectedCustomTypesAsync");
+        Assert.Equal(customTypesPath, viewModel.FilePath);
+        Assert.True(viewModel.HasWorkingFile);
+
+        await InvokePrivateAsync(viewModel, "DeleteSelectedCustomCeAsync");
+
+        Assert.False(viewModel.HasWorkingFile);
+        Assert.Empty(viewModel.FilePath);
+        Assert.Empty(viewModel.Entries);
+        Assert.Equal(missionFolder, viewModel.MissionFolder);
+        Assert.False(File.Exists(customTypesPath));
+        Assert.Contains("unloaded", viewModel.CustomCeStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unloaded", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
 }

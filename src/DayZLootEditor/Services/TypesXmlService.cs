@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
-using DayZLootForge.Models;
+using DayZLootEditor.Models;
 
-namespace DayZLootForge.Services;
+namespace DayZLootEditor.Services;
 
 public sealed class TypesXmlService : ITypesXmlService
 {
@@ -82,18 +82,30 @@ public sealed class TypesXmlService : ITypesXmlService
             Encoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
         };
 
-        await using (var stream = File.Open(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
-        await using (var writer = XmlWriter.Create(stream, settings))
+        try
         {
-            await document.SaveAsync(writer, cancellationToken).ConfigureAwait(false);
+            await using (var stream = File.Open(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var writer = XmlWriter.Create(stream, settings))
+            {
+                await document.SaveAsync(writer, cancellationToken).ConfigureAwait(false);
+            }
+
+            File.Move(temporaryPath, path, overwrite: true);
+
+            foreach (var entry in entryList)
+            {
+                entry.SourceElement = new XElement(BuildTypeElement(entry, entry.SourceElement));
+                entry.AcceptClean();
+            }
         }
-
-        File.Move(temporaryPath, path, overwrite: true);
-
-        foreach (var entry in entryList)
+        catch
         {
-            entry.SourceElement = new XElement(BuildTypeElement(entry, entry.SourceElement));
-            entry.AcceptClean();
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+
+            throw;
         }
     }
 
