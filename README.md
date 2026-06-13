@@ -203,4 +203,4 @@ Bug reports, polish, and workflow improvements are welcome. If you change save l
 
 ## License
 
-Add your preferred license here.
+Read Licence.txt
