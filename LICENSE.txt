@@ -1,7 +1,7 @@
 DayZLootEditor Custom License
 Version 1.0
 
-Copyright (c) [YEAR] [OWNER NAME]
+Copyright (c) [2026] [NobbyBollocks]
 
 1. Grant of Use
 Permission is granted to download, install, and use this software for personal, private, and non-commercial use only.
@@ -33,6 +33,6 @@ To the maximum extent permitted by law, the copyright holder shall not be liable
 
 10. Permission Requests
 For redistribution, commercial use, collaboration, or any exception to these terms, contact:
-[CONTACT EMAIL OR DISCORD]
+[https://discord.gg/DjRaxmmp7z]
 
 By using this software, you agree to this license.
