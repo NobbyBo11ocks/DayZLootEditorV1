@@ -1,0 +1,38 @@
+DayZLootEditor Custom License
+Version 1.0
+
+Copyright (c) [YEAR] [OWNER NAME]
+
+1. Grant of Use
+Permission is granted to download, install, and use this software for personal, private, and non-commercial use only.
+
+2. No Commercial Use
+You may not sell, rent, sublicense, lease, bundle, monetize, or otherwise use this software for any commercial purpose.
+This includes paid access, donations tied to access, subscription access, reseller packs, server packs sold for profit, or any other monetized distribution or service involving this software.
+
+3. No Redistribution
+You may not reupload, mirror, republish, redistribute, share, or otherwise make this software available to any third party in whole or in part, whether modified or unmodified, without prior written permission from the copyright holder.
+
+4. No Modified Redistribution
+You may not modify, adapt, reverse engineer for redistribution, decompile for redistribution, rebrand, rename, or create derivative works for public release without prior written permission from the copyright holder.
+
+5. No Removal of Notices
+You may not remove, alter, or hide any copyright, credit, license, branding, or attribution notices included with this software.
+
+6. Ownership
+This software is licensed, not sold. All rights, title, and interest in the software remain with the copyright holder.
+
+7. Termination
+Any violation of this license automatically terminates your right to use the software. Upon termination, you must stop using the software and delete all copies in your possession or control.
+
+8. No Warranty
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to merchantability, fitness for a particular purpose, and noninfringement.
+
+9. Limitation of Liability
+To the maximum extent permitted by law, the copyright holder shall not be liable for any claim, damages, or other liability arising from or related to the software or its use.
+
+10. Permission Requests
+For redistribution, commercial use, collaboration, or any exception to these terms, contact:
+[CONTACT EMAIL OR DISCORD]
+
+By using this software, you agree to this license.
