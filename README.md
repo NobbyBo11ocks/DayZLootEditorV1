@@ -1,51 +1,133 @@
-# DayZLootEditor
+<div align="center">
 
-> A clean desktop editor for **DayZ Central Economy** files — built for faster edits, safer saves, and less guesswork.
+# DayZ Loot Editor
 
-DayZLootEditor helps you manage `types.xml` and related custom CE files without fighting raw XML by hand. It is built with **Avalonia** and **.NET**, runs as a desktop app, and focuses on safe file handling, validation, and a smoother DayZ server workflow.
+**A Windows desktop editor for DayZ loot balancing and custom CE file management**
 
-## Why use it?
+Safer saves, cleaner workflows, modular CE support, and a validation feed that helps catch broken values **before** they hit your server.
 
-Editing DayZ loot files manually is easy to mess up. This tool is built to make common tasks faster and safer:
+<p>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-1f6feb?style=for-the-badge" />
+  <img alt=".NET" src="https://img.shields.io/badge/.NET-10-512bd4?style=for-the-badge" />
+  <img alt="Build" src="https://img.shields.io/badge/build-passing-3fb950?style=for-the-badge" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-40%20passed-3fb950?style=for-the-badge" />
+  <img alt="License" src="https://img.shields.io/badge/license-personal%20use%20only-d29922?style=for-the-badge" />
+</p>
 
-- open a mission folder and auto-load `db/types.xml`
-- open any `types.xml` directly
-- search, filter, edit, validate, add, delete, and bulk-scale loot entries
-- create backups before save
-- use temp-file swap saving to reduce overwrite risk
-- manage custom CE files from `cfgeconomycore.xml`
-- create and register supported CE XML files with the correct root tags
+</div>
+
+![DayZ Loot Editor](docs/screenshots/home-empty.png)
+
+---
+
+## Overview
+
+**DayZ Loot Editor** is made for server owners and modders who want a faster, safer way to work with:
+
+- `db/types.xml`
+- `cfgeconomycore.xml`
+- modular custom CE files such as `types`, `spawnabletypes`, `events`, and `globals`
+
+Instead of hand-editing raw XML and hoping nothing breaks, the app gives you a focused workflow for editing, validating, previewing, and saving your economy files with more confidence.
+
+---
+
+## Why this tool exists
+
+Manual DayZ economy editing is powerful, but it is also easy to break:
+
+- values can drift out of range
+- `min` can end up higher than `nominal`
+- stale CE registrations can pile up
+- custom CE files can become messy or inconsistent
+- one bad save can cause server-side headaches
+
+This tool is built to reduce that friction with a proper desktop workflow.
 
 ---
 
 ## Features
 
 ### Loot Editor
-- Open a DayZ mission folder and auto-load `db/types.xml`
-- Open any `types.xml` directly
-- Search entries by name
-- Filter and review loot definitions quickly
-- Edit common DayZ loot fields
+- Open a mission folder and auto-target `db/types.xml`
+- Open a standalone `types.xml` directly
+- Search by item name, category, usage, value, and tags
+- Edit core loot values in a cleaner table + side panel workflow
 - Add and delete entries
-- Bulk-scale values
-- Preview save differences
-- Validate for common data issues before saving
-- Save safely with backup + temp-file swap
+- Filter to only problematic rows
+- Apply balance presets
+- Preview save diffs before writing XML
+- Validate entries before saving
 
-### Custom CE Files
-- Read registered custom CE files from `cfgeconomycore.xml`
-- Create a custom folder such as `modtypes`
-- Create a new CE XML file with the correct root tag
-- Register files under the correct `<ce folder="...">` block
-- Detect and report common setup problems:
-  - missing folder
-  - missing file
-  - invalid XML
-  - wrong root tag
-  - duplicate registration
-  - unsupported CE file type
+### Custom CE Manager
+- Inspect CE registrations loaded from `cfgeconomycore.xml`
+- Create and register modular custom CE files
+- Use starter templates for `types`, `spawnabletypes`, `events`, and `globals`
+- Review file path, type, and state in one list
+- Preview repair diffs
+- Repair root-tag issues
+- Unregister stale entries safely
+- Keep modular balancing files separate from the main `types.xml`
 
-### Supported custom CE root types
+### Validation Feed
+One of the nicest parts of the tool is the **Validation Feed** on the right side of the editor.
+
+It gives quick, visible feedback on problems that should be fixed before saving, instead of leaving you to discover them later in a broken mission setup.
+
+It helps catch issues like:
+
+- `minimum quantity cannot be greater than nominal`
+- invalid count relationships
+- broken loot values
+- registration/setup issues with custom CE files
+
+That makes balancing safer and much less guessy, especially when working through a large `types.xml`.
+
+---
+
+## Screenshot Tour
+
+### Start screen
+Open a mission folder or a standalone `types.xml` to begin.
+
+![Start screen](docs/screenshots/home-empty.png)
+
+### Custom CE Manager
+Create, register, validate, and maintain modular CE XML files without mixing them into the main loot file.
+
+![Custom CE Manager](docs/screenshots/ce-manager-empty.png)
+
+### Loot Editor in use
+Search, review, edit, and validate live loot entries from `types.xml`.
+
+![Loot Editor loaded](docs/screenshots/loot-editor-loaded.png)
+
+### Registered Custom CE files
+See registered custom files, their root type, path, status, and available actions.
+
+![Custom CE Manager loaded](docs/screenshots/ce-manager-loaded.png)
+
+### Validation Feed in action
+The validation panel makes real data issues obvious before save time.
+
+![Validation Feed](docs/screenshots/validation-feed.png)
+
+---
+
+## Typical Workflow
+
+1. Open your DayZ mission folder.
+2. Let the app load `db/types.xml`.
+3. Search or filter the entries you want to work on.
+4. Edit values and keep an eye on the **Validation Feed**.
+5. Use **Preview Diff** to inspect XML changes.
+6. Save changes with **Auto-backup before saving** enabled.
+7. Use **Custom CE Manager** to create or maintain modular CE files registered in `cfgeconomycore.xml`.
+
+---
+
+## Supported Custom CE Root Types
+
 | CE type | Root tag |
 |---|---|
 | `types` | `<types>` |
@@ -56,50 +138,29 @@ Editing DayZ loot files manually is easy to mess up. This tool is built to make 
 
 ---
 
-## Screens / Workflow
-
-Typical flow:
-
-1. Open your mission folder.
-2. Let the app load `db/types.xml`.
-3. Search or filter the item you want.
-4. Edit values and review validation warnings.
-5. Save changes.
-6. Use **Custom CE Files** for separate XML files registered in `cfgeconomycore.xml`.
-
----
-
-## Getting started
+## Build From Source
 
 ### Requirements
 - Windows
-- .NET 10 SDK for development
-- Visual Studio 2022/2026 or the `dotnet` CLI
-- Access to `nuget.org`
+- .NET 10 SDK
+- Visual Studio
+- NuGet access
 
-> End users running a published release only need the packaged app build.
-
-### Clone and build
-
-#### PowerShell
+### Restore / Build / Test
 ```powershell
-./scripts/restore-clean.ps1
-dotnet restore ./DayZLootEditor.slnx
-dotnet build ./DayZLootEditor.slnx
-dotnet test ./DayZLootEditor.slnx
-dotnet run --project ./src/DayZLootEditor/DayZLootEditor.csproj
+dotnet restore
+dotnet build
+dotnet test
 ```
 
-#### Bash
-```bash
-./scripts/build.sh
-dotnet test ./DayZLootEditor.slnx
-dotnet run --project ./src/DayZLootEditor/DayZLootEditor.csproj
+### Run
+```powershell
+dotnet run --project .\src\DayZLootEditor\DayZLootEditor.csproj
 ```
 
 ---
 
-## Build a Windows `.exe`
+## Publish a Windows `.exe`
 
 ### Visual Studio
 1. Open the solution.
@@ -110,97 +171,64 @@ dotnet run --project ./src/DayZLootEditor/DayZLootEditor.csproj
 6. Set:
    - **Target Runtime:** `win-x64`
    - **Deployment Mode:** `Self-contained`
-   - **Single file:** enabled
+   - **Produce single file:** enabled
 7. Click **Publish**.
 
-Your published output will contain `DayZLootEditor.exe`.
-
 ### CLI
-```bash
-dotnet publish ./src/DayZLootEditor/DayZLootEditor.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-Published output is usually written to:
-
-```text
-src/DayZLootEditor/bin/Release/net10.0/win-x64/publish/
+```powershell
+dotnet publish .\src\DayZLootEditor\DayZLootEditor.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
 ---
 
-## Safe editing workflow
+## Download / Release Notes
 
-1. Open your mission folder.
-2. Use **Loot Editor** for normal `types.xml` work.
-3. Use **Custom CE Files** for external CE documents.
-4. Review validation results before saving.
-5. Keep backups enabled when editing live server files.
-6. Test changes on a non-production server first.
+For release builds, publish the app in **Release** mode and upload either:
 
----
+- `DayZLootEditor.exe`
+- or a zipped publish folder such as `DayZLootEditor-win-x64.zip`
 
-## Stability notes
-
-This project includes test coverage around:
-- safe save behavior
-- backup handling
-- malformed file load handling
-- recent-file workflows
-- custom CE register / unregister / repair flows
-
-Recent hardening work includes:
-- backup failures no longer block a normal save
-- custom CE temp files are cleaned up on failed saves
-- deleting a currently open custom CE file unloads the editor state correctly
-- build, restore, and test pipeline fixes
+A zipped release is usually cleaner for GitHub Releases.
 
 ---
 
-## Project structure
+## Safety Notes
 
-```text
-src/DayZLootEditor/         Main desktop application
-tests/DayZLootEditor.Tests/ Test project
-scripts/                    Build and restore helper scripts
-.github/workflows/          CI workflow
-```
-
----
-
-## Notes
-
-- The app opens in the **Loot Editor** workspace by default.
-- Switching files or mission folders prompts before discarding unsaved changes.
-- Failed file loads preserve the currently loaded session where possible.
-- Fatal UI-thread exceptions are logged and the app shuts down cleanly.
+- Keep **Auto-backup before saving** enabled when editing live mission files
+- Review the **Validation Feed** before every save
+- Use **Preview Diff** before writing XML changes
+- Test changes on a non-production server first
+- Keep modular CE files separated where possible instead of overloading `types.xml`
 
 ---
 
-## Recommended release checklist
+## Verified Status
 
-Before publishing a release:
+Latest verified state:
 
-- `dotnet restore`
-- `dotnet build`
-- `dotnet test`
-- manual smoke test:
-  - open `types.xml`
-  - edit an item
-  - save
-  - save as
-  - register custom CE
-  - open custom CE
-  - remove custom CE
-  - close with unsaved changes
-
----
-
-## Contributing
-
-Bug reports, polish, and workflow improvements are welcome. If you change save logic or CE registration behavior, add or update tests with the change.
+- `dotnet restore` passed
+- `dotnet build` passed
+- `dotnet test` passed
+- **40 tests passed, 0 failed**
 
 ---
 
 ## License
 
-Read Licence.txt
+This project is source-available for **personal, non-commercial use only**.
+
+Not allowed without prior written permission:
+
+- monetizing
+- reuploading
+- redistributing
+- repackaging
+- public modified releases
+
+See `LICENSE.txt` for the full terms.
+
+---
+
+## Credits
+
+Created by **"NobbyBollocks"**
