@@ -166,3 +166,5 @@ See `LICENSE.txt` for the full terms.
 ## Credits
 
 Created by **"NobbyBollocks"**
+
+Discord: https://discord.gg/QwZzkyR3dk
