@@ -1,5 +1,5 @@
 param(
-    [string]$Project = ".\src\DayZLootEditor\DayZLootEditor.csproj"
+    [string]$Project = ".\src\DZServerToolkit\DZServerToolkit.csproj"
 )
 
 Write-Host "Clearing NuGet caches..."

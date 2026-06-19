@@ -1,0 +1,706 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DZServerToolkit.Views.MainWindow"
+        Title="DZ Server Toolkit"
+        Width="1280"
+        Height="780"
+        MinWidth="1100"
+        MinHeight="660"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="Auto,*,30">
+    <Border Grid.Row="0" Classes="hero">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="nav tab" Classes.active="{Binding IsLootEditorVisible}" Content="Loot" Command="{Binding ShowLootEditorCommand}" />
+          <Button Classes="nav tab" Classes.active="{Binding IsCustomCeVisible}" Content="Custom CE" Command="{Binding ShowCustomCeCommand}" />
+          <Button Classes="nav tab" Classes.active="{Binding IsInfoVisible}" Content="Help" Command="{Binding ShowInfoCommand}" />
+        </StackPanel>
+
+        <WrapPanel Grid.Column="1" Orientation="Horizontal" ItemHeight="34" ItemSpacing="5" VerticalAlignment="Center">
+          <Border Classes="status-chip" IsVisible="{Binding HasMissionContextBadge}">
+            <TextBlock Classes="tiny-muted badge" Text="{Binding MissionContextBadgeText}" />
+          </Border>
+          <Border Classes="status-chip" IsVisible="{Binding HasFileContextBadge}">
+            <TextBlock Classes="tiny-muted badge" Text="{Binding FileContextBadgeText}" />
+          </Border>
+        </WrapPanel>
+
+        <WrapPanel Grid.Column="2" Orientation="Horizontal" ItemHeight="34" ItemSpacing="5" VerticalAlignment="Center">
+          <Button Classes="primary toolbar-button compact" Content="Open Mission" Command="{Binding OpenMissionFolderCommand}" />
+          <Button Classes="toolbar-button compact" Content="Open XML" Command="{Binding OpenTypesFileCommand}" />
+          <Button Classes="toolbar-button compact" Content="Unload" Command="{Binding UnloadLoadedFileCommand}" />
+          <Button Classes="primary toolbar-button compact" Content="Save" Command="{Binding SaveCommand}" />
+          <Button Classes="toolbar-button compact" Content="Save Copy" Command="{Binding SaveAsCommand}" />
+        </WrapPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" Margin="10" ColumnDefinitions="272,*" ColumnSpacing="10">
+      <ScrollViewer Grid.Column="0"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="5">
+          <Border Classes="card compact-card sidebar-card">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Session" />
+              </Expander.Header>
+              <StackPanel Classes="sidebar-section">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
+                  <StackPanel Classes="stack-tight">
+                    <TextBlock Classes="tiny-muted" Text="MISSION" />
+                    <Border Classes="inner-card compact-field">
+                      <TextBlock Classes="compact-value" Text="{Binding MissionDisplayName}" TextWrapping="Wrap" MaxHeight="44" />
+                    </Border>
+                  </StackPanel>
+                  <StackPanel Grid.Row="1" Classes="stack-tight">
+                    <TextBlock Classes="tiny-muted" Text="FILE" />
+                    <Border Classes="inner-card compact-field">
+                      <TextBlock Classes="compact-value" Text="{Binding FileDisplayName}" TextWrapping="Wrap" MaxHeight="44" />
+                    </Border>
+                  </StackPanel>
+                </Grid>
+                <Border Classes="inner-card soft compact-field">
+                  <CheckBox Content="Backup on save" IsChecked="{Binding AutoBackup}" />
+                </Border>
+              </StackPanel>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card sidebar-card">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Metrics" />
+              </Expander.Header>
+              <Grid Margin="0,6,0,0"
+                    ColumnDefinitions="*,*"
+                    RowDefinitions="Auto,Auto,Auto"
+                    RowSpacing="2"
+                    ColumnSpacing="2">
+                <Border Classes="metric-card">
+                  <StackPanel>
+                    <TextBlock Classes="tiny-muted" Text="ROWS" />
+                    <TextBlock Classes="metric" Text="{Binding TotalEntries}" />
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="metric-card">
+                  <StackPanel>
+                    <TextBlock Classes="tiny-muted" Text="VISIBLE" />
+                    <TextBlock Classes="metric" Text="{Binding FilteredCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Classes="metric-card">
+                  <StackPanel>
+                    <TextBlock Classes="tiny-muted" Text="ERR" />
+                    <TextBlock Classes="metric" Text="{Binding ErrorCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1" Classes="metric-card">
+                  <StackPanel>
+                    <TextBlock Classes="tiny-muted" Text="CE ERR" />
+                    <TextBlock Classes="metric" Text="{Binding CustomCeErrorCount}" />
+                  </StackPanel>
+                </Border>
+                <Border Grid.Row="2" Grid.ColumnSpan="2" Classes="metric-card">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Classes="tiny-muted" Text="DIRTY" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="metric-small" Text="{Binding DirtyCount}" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card sidebar-card">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Recent" />
+              </Expander.Header>
+              <Grid Margin="0,6,0,0" RowDefinitions="Auto,Auto" RowSpacing="5">
+                <Border Classes="inner-card sidebar-pane">
+                  <StackPanel Classes="stack-tight">
+                    <TextBlock Classes="tiny-muted" Text="XML" />
+                    <ComboBox ItemsSource="{Binding RecentTypesFiles}" SelectedItem="{Binding SelectedRecentTypesFile, Mode=TwoWay}" />
+                    <Button Classes="sidebar-fill compact" Content="Open Recent XML" Command="{Binding OpenSelectedRecentTypesFileCommand}" />
+                  </StackPanel>
+                </Border>
+                <Border Grid.Row="1" Classes="inner-card sidebar-pane">
+                  <StackPanel Classes="stack-tight">
+                    <TextBlock Classes="tiny-muted" Text="MISSION" />
+                    <ComboBox ItemsSource="{Binding RecentMissionFolders}" SelectedItem="{Binding SelectedRecentMissionFolder, Mode=TwoWay}" />
+                    <Button Classes="sidebar-fill compact" Content="Open Recent Mission" Command="{Binding OpenSelectedRecentMissionFolderCommand}" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsLootEditorVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Selected Loot" />
+              </Expander.Header>
+              <Grid Margin="0,6,0,0">
+                <ContentControl Content="{Binding SelectedEntry}" IsVisible="{Binding HasSelectedEntry}">
+                  <ContentControl.ContentTemplate>
+                    <DataTemplate>
+                      <StackPanel Spacing="5">
+                        <Border Classes="inner-card">
+                          <Grid ColumnDefinitions="80,*" ColumnSpacing="5">
+                            <StackPanel Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="STATE" />
+                              <Border Classes="secondary-surface compact-field">
+                                <TextBlock Classes="compact-value" Text="{Binding ValidationState}" />
+                              </Border>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="NAME" />
+                              <TextBox Text="{Binding Name, Mode=TwoWay}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="inner-card">
+                          <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="5" RowSpacing="5">
+                            <StackPanel Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="NOM" />
+                              <NumericUpDown Minimum="0" Maximum="999999" Value="{Binding Nominal, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="MIN" />
+                              <NumericUpDown Minimum="0" Maximum="999999" Value="{Binding Min, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="LIFE" />
+                              <NumericUpDown Minimum="0" Maximum="99999999" Value="{Binding Lifetime, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="RESTOCK" />
+                              <NumericUpDown Minimum="0" Maximum="99999999" Value="{Binding Restock, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="QMIN" />
+                              <NumericUpDown Minimum="-1" Maximum="100" Value="{Binding QuantMin, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="QMAX" />
+                              <NumericUpDown Minimum="-1" Maximum="100" Value="{Binding QuantMax, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="COST" />
+                              <NumericUpDown Minimum="0" Maximum="999999" Value="{Binding Cost, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="CAT" />
+                              <TextBox Text="{Binding Category, Mode=TwoWay}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="inner-card soft compact-field">
+                          <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="5" RowSpacing="4">
+                            <CheckBox Content="Map" IsChecked="{Binding CountInMap, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="1" Content="Cargo" IsChecked="{Binding CountInCargo, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="2" Content="Hoarder" IsChecked="{Binding CountInHoarder, Mode=TwoWay}" />
+                            <CheckBox Grid.Row="1" Content="Player" IsChecked="{Binding CountInPlayer, Mode=TwoWay}" />
+                            <CheckBox Grid.Row="1" Grid.Column="1" Content="Crafted" IsChecked="{Binding Crafted, Mode=TwoWay}" />
+                            <CheckBox Grid.Row="1" Grid.Column="2" Content="Deloot" IsChecked="{Binding Deloot, Mode=TwoWay}" />
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="inner-card">
+                          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
+                            <StackPanel Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="USAGE" />
+                              <TextBox Text="{Binding UsagesCsv, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="VALUE" />
+                              <TextBox Text="{Binding ValuesCsv, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="TAGS" />
+                              <TextBox Text="{Binding TagsCsv, Mode=TwoWay}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ContentControl.ContentTemplate>
+                </ContentControl>
+
+                <Border IsVisible="{Binding IsEntrySelectionEmpty}" Classes="empty-state compact-empty-state centered">
+                  <TextBlock Classes="muted" Text="Select a row to edit." TextWrapping="Wrap" />
+                </Border>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsLootEditorVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <TextBlock Classes="section-title" Text="Validation" />
+                  <Button Grid.Column="1" Classes="micro sidebar-action" Content="Run" Command="{Binding ValidateCommand}" />
+                </Grid>
+              </Expander.Header>
+              <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="5">
+                <Border Classes="inner-card soft">
+                  <TextBlock Classes="muted" Text="{Binding ValidationSummary}" TextWrapping="Wrap" />
+                </Border>
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding ValidationIssues}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="inner-card soft" Margin="0,0,0,4">
+                        <StackPanel Classes="stack-tight">
+                          <TextBlock Text="{Binding SeverityText}" FontWeight="Bold" />
+                          <TextBlock Classes="muted" Text="{Binding DisplayText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsLootEditorVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <TextBlock Classes="section-title" Text="Save Preview" />
+                  <Button Grid.Column="1" Classes="micro sidebar-action icon-only" Content="↻" ToolTip.Tip="Refresh save preview" Command="{Binding GenerateSavePreviewCommand}" />
+                </Grid>
+              </Expander.Header>
+              <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="5">
+                <Border Classes="warning-card compact-warning">
+                  <TextBlock Text="{Binding SavePreviewSummary}" TextWrapping="Wrap" />
+                </Border>
+                <ItemsControl Grid.Row="1" IsVisible="{Binding HasSavePreviewSections}" ItemsSource="{Binding SavePreviewSections}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="inner-card soft" Margin="0,0,0,4">
+                        <StackPanel Classes="stack-tight">
+                          <TextBlock Classes="section-title" Text="{Binding Title}" />
+                          <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsCustomCeVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Create / Register CE" />
+              </Expander.Header>
+              <StackPanel Classes="sidebar-section" Spacing="5">
+                <Border Classes="inner-card soft compact-field">
+                  <WrapPanel Orientation="Horizontal" ItemHeight="22" ItemSpacing="5">
+                    <Button Classes="micro" Content="Types" Command="{Binding UseTypesPresetCommand}" />
+                    <Button Classes="micro" Content="Spawn" Command="{Binding UseSpawnablePresetCommand}" />
+                    <Button Classes="micro" Content="Events" Command="{Binding UseEventsPresetCommand}" />
+                    <Button Classes="micro" Content="Globals" Command="{Binding UseGlobalsPresetCommand}" />
+                  </WrapPanel>
+                </Border>
+                <Border Classes="inner-card">
+                  <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="5" RowSpacing="5">
+                    <StackPanel Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="FOLDER" />
+                      <TextBox Text="{Binding NewCeFolderName, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="TYPE" />
+                      <ComboBox ItemsSource="{Binding CustomCeTypeOptions}" SelectedItem="{Binding NewCeFileType, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="FILE" />
+                      <TextBox Text="{Binding NewCeFileName, Mode=TwoWay}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <Border Classes="inner-card soft">
+                  <TextBlock Classes="muted" Text="{Binding CustomCePreviewSummary}" TextWrapping="Wrap" />
+                </Border>
+                <WrapPanel Orientation="Horizontal" ItemHeight="24" ItemSpacing="5">
+                  <Button Classes="primary compact" Content="Create / Register" Command="{Binding AddCustomCeFileCommand}" />
+                  <Button Classes="subtle compact" Content="Reset" Command="{Binding ResetCustomCeFormCommand}" />
+                  <Button Classes="compact" Content="Validate CE" Command="{Binding ValidateCustomCeCommand}" />
+                </WrapPanel>
+              </StackPanel>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsCustomCeVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="Selected CE" />
+              </Expander.Header>
+              <Grid Margin="0,6,0,0">
+                <ContentControl Content="{Binding SelectedCustomCeFile}" IsVisible="{Binding HasSelectedCustomCeFile}">
+                  <ContentControl.ContentTemplate>
+                    <DataTemplate>
+                      <StackPanel Spacing="5">
+                        <Border Classes="inner-card soft compact-field">
+                          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <Border Background="{Binding StatusBadgeBackground}"
+                                    BorderBrush="{Binding StatusBadgeBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="999"
+                                    Padding="6,2"
+                                    HorizontalAlignment="Left">
+                              <TextBlock Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}" FontWeight="Bold" />
+                            </Border>
+                            <CheckBox Grid.Column="1"
+                                      IsChecked="{Binding DataContext.DeleteCustomCeFileOnUnregister, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                      Content="Delete file on unregister" />
+                          </Grid>
+                        </Border>
+                        <Border Classes="inner-card">
+                          <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
+                            <StackPanel Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="PATH" />
+                              <TextBlock Text="{Binding RelativePath}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Classes="stack-tight">
+                              <TextBlock Classes="tiny-muted" Text="ACTION" />
+                              <TextBlock Classes="muted"
+                                         Text="{Binding DataContext.SelectedCustomCeNextAction, RelativeSource={RelativeSource AncestorType=Window}}"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                        <Border Classes="inner-card soft">
+                          <StackPanel Classes="stack-tight">
+                            <TextBlock Classes="tiny-muted" Text="FULL PATH" />
+                            <TextBlock Classes="muted" Text="{Binding FullPath}" TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ContentControl.ContentTemplate>
+                </ContentControl>
+
+                <Border IsVisible="{Binding IsCustomCeSelectionEmpty}" Classes="empty-state compact-empty-state">
+                  <TextBlock Classes="muted" Text="Select a CE row." TextWrapping="Wrap" />
+                </Border>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsCustomCeVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                  <TextBlock Classes="section-title" Text="Repair Diff" />
+                  <Button Grid.Column="1" Classes="micro sidebar-action icon-only" Content="↻" ToolTip.Tip="Refresh save preview" Command="{Binding RefreshSelectedCustomCeDiffCommand}" />
+                </Grid>
+              </Expander.Header>
+              <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="5">
+                <Border Classes="warning-card compact-warning">
+                  <TextBlock Classes="muted" Text="{Binding CustomCeRepairDiffSummary}" TextWrapping="Wrap" />
+                </Border>
+                <ItemsControl Grid.Row="1" IsVisible="{Binding HasCustomCeRepairDiff}" ItemsSource="{Binding CustomCeRepairDiffSections}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="inner-card soft" Margin="0,0,0,4">
+                        <StackPanel Classes="stack-tight">
+                          <TextBlock Classes="section-title" Text="{Binding Title}" />
+                          <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </Expander>
+          </Border>
+
+          <Border Classes="card compact-card" IsVisible="{Binding IsCustomCeVisible}">
+            <Expander IsExpanded="False" ExpandDirection="Down">
+              <Expander.Header>
+                <TextBlock Classes="section-title" Text="CE Health" />
+              </Expander.Header>
+              <Grid Margin="0,6,0,0" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="5">
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
+                  <Border Classes="metric-card">
+                    <StackPanel Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="FILES" />
+                      <TextBlock Classes="metric" Text="{Binding CustomCeFileCount}" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Column="1" Classes="metric-card">
+                    <StackPanel Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="READY" />
+                      <TextBlock Classes="metric" Text="{Binding CustomCeReadyCount}" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Column="2" Classes="metric-card">
+                    <StackPanel Classes="stack-tight">
+                      <TextBlock Classes="tiny-muted" Text="INFO" />
+                      <TextBlock Classes="metric" Text="{Binding CustomCeInfoCount}" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <Border Grid.Row="1" Classes="inner-card soft">
+                  <TextBlock Classes="muted" Text="{Binding CustomCeConflictSummary}" TextWrapping="Wrap" />
+                </Border>
+                <ItemsControl Grid.Row="2" IsVisible="{Binding HasCustomCeConflicts}" ItemsSource="{Binding CustomCeConflictItems}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="inner-card soft" Margin="0,0,0,4">
+                        <TextBlock Classes="muted" Text="{Binding}" TextWrapping="Wrap" />
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl Grid.Row="3" ItemsSource="{Binding CustomCeIssues}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="inner-card soft" Margin="0,0,0,4">
+                        <StackPanel Classes="stack-tight">
+                          <TextBlock Text="{Binding SeverityText}" FontWeight="Bold" />
+                          <TextBlock Classes="muted" Text="{Binding DisplayText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </Expander>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Grid Grid.Column="1" IsVisible="{Binding IsLootEditorVisible}" RowDefinitions="Auto,*" RowSpacing="10">
+        <Border Classes="card compact-card sidebar-card">
+          <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+            <Grid ColumnDefinitions="*,150,Auto" ColumnSpacing="10">
+              <TextBox PlaceholderText="Search name, category, usage, value, tag" Text="{Binding SearchText, Mode=TwoWay}" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" />
+              <CheckBox Grid.Column="2" Content="Issues" IsChecked="{Binding ShowOnlyIssues}" VerticalAlignment="Center" Margin="4,0,0,0" />
+            </Grid>
+
+            <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemHeight="36" ItemSpacing="8">
+              <Button Classes="toolbar-button compact" Content="Clear" Command="{Binding ClearFiltersCommand}" />
+              <Button Classes="toolbar-button compact" Content="Undo" Command="{Binding UndoCommand}" />
+              <Button Classes="toolbar-button compact" Content="Redo" Command="{Binding RedoCommand}" />
+              <Button Classes="toolbar-button compact" Content="Add" Command="{Binding AddEntryCommand}" />
+              <Button Classes="danger toolbar-button compact" Content="Delete" Command="{Binding DeleteSelectedCommand}" />
+              <NumericUpDown Width="68" Minimum="1" Maximum="5000" Increment="10" Value="{Binding BulkScalePercent}" />
+              <Button Classes="toolbar-button compact" Content="Scale" Command="{Binding ScaleVisibleCommand}" />
+              <ComboBox Width="150" ItemsSource="{Binding ProfileTemplates}" SelectedItem="{Binding SelectedProfileTemplate}" />
+              <Button Classes="toolbar-button compact" Content="Apply" Command="{Binding ApplyProfileTemplateCommand}" />
+              <Button Classes="toolbar-button compact" Content="Preview" Command="{Binding GenerateSavePreviewCommand}" />
+              <Button Classes="primary toolbar-button compact" Content="Validate" Command="{Binding ValidateCommand}" />
+            </WrapPanel>
+
+            <Border Grid.Row="2" Classes="filter-summary" IsVisible="{Binding HasActiveLootFilterSummary}">
+              <WrapPanel Orientation="Horizontal" ItemHeight="36" ItemSpacing="8">
+                <TextBlock Classes="tiny-muted" Text="FILTERS" VerticalAlignment="Center" />
+                <Button Classes="filter-chip" IsVisible="{Binding HasSearchFilter}" Content="{Binding SearchFilterChipText}" Command="{Binding ClearLootSearchCommand}" />
+                <Button Classes="filter-chip" IsVisible="{Binding HasCategoryFilter}" Content="{Binding CategoryFilterChipText}" Command="{Binding ClearLootCategoryFilterCommand}" />
+                <Button Classes="filter-chip" IsVisible="{Binding HasIssueFilter}" Content="{Binding IssueFilterChipText}" Command="{Binding ClearLootIssueFilterCommand}" />
+              </WrapPanel>
+            </Border>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="card compact-card data-region">
+          <Grid>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+              <DataGrid ItemsSource="{Binding FilteredEntries}"
+                        SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                        AutoGenerateColumns="False"
+                        CanUserSortColumns="True"
+                        CanUserResizeColumns="True"
+                        CanUserReorderColumns="True"
+                        IsReadOnly="False"
+                        FrozenColumnCount="2"
+                        RowHeight="28"
+                        MinColumnWidth="60"
+                        HorizontalAlignment="Stretch"
+                        MinWidth="1120">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="State" Binding="{Binding ValidationState}" IsReadOnly="True" Width="70" />
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="220" />
+                  <DataGridTextColumn Header="Nominal" Binding="{Binding Nominal}" Width="80" />
+                  <DataGridTextColumn Header="Minimum" Binding="{Binding Min}" Width="80" />
+                  <DataGridTextColumn Header="Lifetime" Binding="{Binding Lifetime}" Width="90" />
+                  <DataGridTextColumn Header="Restock" Binding="{Binding Restock}" Width="90" />
+                  <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120" />
+                  <DataGridTextColumn Header="Usage" Binding="{Binding UsagesCsv}" Width="170" />
+                  <DataGridTextColumn Header="Value" Binding="{Binding ValuesCsv}" Width="140" />
+                  <DataGridTextColumn Header="Tags" Binding="{Binding TagsCsv}" Width="160" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </ScrollViewer>
+
+            <Border IsVisible="{Binding ShowLootOnboarding}" Classes="empty-state centered">
+              <StackPanel Spacing="8" MaxWidth="300" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Classes="section-title" Text="Open a mission or types.xml" TextAlignment="Center" />
+                <WrapPanel HorizontalAlignment="Center" ItemHeight="36" ItemSpacing="8">
+                  <Button Classes="primary quick-action" Content="Open Mission" Command="{Binding OpenMissionFolderCommand}" />
+                  <Button Classes="quick-action" Content="Open XML" Command="{Binding OpenTypesFileCommand}" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+
+            <Border IsVisible="{Binding ShowLootNoResults}" Classes="empty-state centered">
+              <StackPanel Spacing="8" MaxWidth="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Classes="section-title" Text="No matching rows" TextAlignment="Center" />
+                <Button Classes="quick-action" Content="Clear Filters" Command="{Binding ClearFiltersCommand}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <Grid Grid.Column="1" IsVisible="{Binding IsCustomCeVisible}" RowDefinitions="Auto,*" RowSpacing="10">
+        <Border Classes="card compact-card sidebar-card">
+          <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+            <Grid ColumnDefinitions="Auto,112,*,Auto" ColumnSpacing="10">
+              <TextBlock Classes="tiny-muted" Text="HEALTH" VerticalAlignment="Center" />
+              <ComboBox Grid.Column="1" ItemsSource="{Binding CustomCeFilterOptions}" SelectedItem="{Binding SelectedCustomCeFilter, Mode=TwoWay}" />
+              <TextBox Grid.Column="2" PlaceholderText="Search CE files" Text="{Binding CustomCeSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+              <Button Grid.Column="3" Classes="toolbar-button compact" Content="Clear" Command="{Binding ClearAllCustomCeFiltersCommand}" />
+            </Grid>
+            <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemHeight="36" ItemSpacing="8">
+              <Button Classes="primary toolbar-button compact" Content="Open" Command="{Binding OpenSelectedCustomTypesCommand}" />
+              <Button Classes="toolbar-button compact" Content="Diff" Command="{Binding RefreshSelectedCustomCeDiffCommand}" />
+              <Button Classes="toolbar-button compact" Content="Repair" Command="{Binding RepairSelectedCustomCeCommand}" />
+              <Button Classes="toolbar-button compact" Content="Unregister" Command="{Binding UnregisterSelectedCustomCeCommand}" />
+              <Button Classes="danger toolbar-button compact" Content="Delete" Command="{Binding DeleteSelectedCustomCeCommand}" />
+              <TextBlock Classes="tiny-muted" Text="{Binding FilteredCustomCeFileCount, StringFormat='Showing {0} file(s)'}" VerticalAlignment="Center" />
+            </WrapPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="card compact-card data-region">
+          <Grid>
+            <DataGrid ItemsSource="{Binding FilteredCustomCeFiles}"
+                      SelectedItem="{Binding SelectedCustomCeFile, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      CanUserSortColumns="True"
+                      CanUserResizeColumns="True"
+                      IsReadOnly="True"
+                      RowHeight="28"
+                      MinColumnWidth="50">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="State" Width="76">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Background="{Binding StatusBadgeBackground}"
+                              BorderBrush="{Binding StatusBadgeBorderBrush}"
+                              BorderThickness="1"
+                              CornerRadius="999"
+                              Padding="5,1">
+                        <TextBlock Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}" FontWeight="Bold" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70" />
+                <DataGridTextColumn Header="Rows" Binding="{Binding ItemCount}" Width="48" />
+                <DataGridTextColumn Header="Folder" Binding="{Binding Folder}" Width="100" />
+                <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="150" />
+                <DataGridTextColumn Header="Path" Binding="{Binding RelativePath}" Width="170" />
+                <DataGridTextColumn Header="Notes" Binding="{Binding IssueSummary}" Width="180" />
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <Border IsVisible="{Binding ShowCustomCeOnboarding}" Classes="empty-state centered">
+              <StackPanel Spacing="7" MaxWidth="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Classes="section-title" Text="Open a mission first" TextAlignment="Center" />
+                <Button Classes="primary quick-action" Content="Open Mission" Command="{Binding OpenMissionFolderCommand}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
+
+            <Border IsVisible="{Binding ShowCustomCeEmptyState}" Classes="empty-state centered">
+              <StackPanel Spacing="7" MaxWidth="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Classes="section-title" Text="No custom CE files" TextAlignment="Center" />
+                <Button Classes="primary quick-action" Content="Create / Register" Command="{Binding AddCustomCeFileCommand}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
+
+            <Border IsVisible="{Binding ShowCustomCeNoResults}" Classes="empty-state centered">
+              <StackPanel Spacing="7" MaxWidth="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Classes="section-title" Text="No matching CE files" TextAlignment="Center" />
+                <Button Classes="quick-action" Content="Clear Filters" Command="{Binding ClearAllCustomCeFiltersCommand}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <ScrollViewer Grid.Column="1" IsVisible="{Binding IsInfoVisible}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+          <Border Classes="card compact-card primary-surface">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-title" Text="Help / Info" />
+              <TextBlock Classes="muted" Text="The main workspaces stay focused on the tables. Details and utilities live in the left rail." TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Border Classes="card compact-card sidebar-card">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="section-title" Text="Loot Workflow" />
+                <TextBlock Classes="help" Text="1. Open Mission loads db/types.xml when available." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="2. Filter rows, select an item, then expand Selected Loot in the left rail to edit details." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="3. Validate before saving. Use Save Preview only when you need to inspect the diff." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="4. Scale and profile templates affect only the visible filtered rows." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Classes="card compact-card sidebar-card">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="section-title" Text="Custom CE Workflow" />
+                <TextBlock Classes="help" Text="Open a mission folder before using CE tools, because registrations are written against cfgeconomycore.xml." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="Create/Register and Selected CE live in the left rail so the table stays the main focus." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="Validate CE Setup checks missing files, duplicate registrations, root issues, and path/type conflicts." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="Use Repair Diff before Repair when a file root needs correction." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Border Classes="card compact-card sidebar-card">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="section-title" Text="Shortcuts" />
+                <TextBlock Classes="help" Text="Ctrl+O: open mission folder" />
+                <TextBlock Classes="help" Text="Ctrl+Shift+O: open types.xml" />
+                <TextBlock Classes="help" Text="Ctrl+S: save" />
+                <TextBlock Classes="help" Text="Ctrl+Shift+S: save copy" />
+                <TextBlock Classes="help" Text="Ctrl+U: unload file" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Classes="card compact-card sidebar-card">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="section-title" Text="Current State" />
+                <TextBlock Classes="tiny-muted" Text="MISSION" />
+                <TextBlock Classes="help" Text="{Binding MissionDisplayName}" TextWrapping="Wrap" />
+                <TextBlock Classes="tiny-muted" Text="FILE" />
+                <TextBlock Classes="help" Text="{Binding FileDisplayName}" TextWrapping="Wrap" />
+                <TextBlock Classes="tiny-muted" Text="VALIDATION" />
+                <TextBlock Classes="help" Text="{Binding ValidationSummary}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Grid>
+      </ScrollViewer>
+    </Grid>
+
+    <Border Grid.Row="2" Classes="footer">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBlock Classes="footer-text" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Classes="footer-text" Text="{Binding ActiveFeature}" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

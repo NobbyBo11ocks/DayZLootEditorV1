@@ -1,6 +1,6 @@
 <div align="center">
 
-# DayZ Loot Editor
+# DZ Server Toolkit
 
 **A Windows desktop editor for DayZ loot balancing and custom CE file management**
 
@@ -16,13 +16,12 @@ Safer saves, cleaner workflows, modular CE support, and a validation feed that h
 
 </div>
 
-![DayZ Loot Editor](docs/screenshots/home-empty.png)
 
 ---
 
 ## Overview
 
-**DayZ Loot Editor** is made for server owners and modders who want a faster, safer way to work with:
+**DZ Server Toolkit** is made for server owners and modders who want a faster, safer way to work with:
 
 - `db/types.xml`
 - `cfgeconomycore.xml`
@@ -52,7 +51,7 @@ This tool is built to reduce that friction with a proper desktop workflow.
 - Open a mission folder and auto-target `db/types.xml`
 - Open a standalone `types.xml` directly
 - Search by item name, category, usage, value, and tags
-- Edit core loot values in a cleaner table + side panel workflow
+- Edit core loot values in a cleaner table + left-inspector workflow
 - Add and delete entries
 - Filter to only problematic rows
 - Apply balance presets
@@ -70,7 +69,7 @@ This tool is built to reduce that friction with a proper desktop workflow.
 - Keep modular balancing files separate from the main `types.xml`
 
 ### Validation Feed
-One of the nicest parts of the tool is the **Validation Feed** on the right side of the editor.
+The **Validation Feed** now sits in the expanded left-side inspector on the Loot page.
 
 It gives quick, visible feedback on problems that should be fixed before saving, instead of leaving you to discover them later in a broken mission setup.
 
@@ -85,42 +84,26 @@ That makes balancing safer and much less guessy, especially when working through
 
 ---
 
-## Screenshot Tour
+## Interface
 
-### Start screen
-Open a mission folder or a standalone `types.xml` to begin.
+This build uses a compact black/grey layout:
 
-![Start screen](docs/screenshots/home-empty.png)
+- Top workspace tabs for Loot, Custom CE, and Help / Info
+- A small top action bar for open, unload, save, and save-copy actions
+- A narrow far-left rail for session status, metrics, and optional recent-file access
+- Expanded left-side Loot inspector for selected-row editing, save preview, and validation
+- Collapsed recent-file controls by default to keep the editor smaller
+- Help text removed from the main editing pages and moved into the Help / Info page
+- Status text moved to the bottom bar so the top bar stays clean
 
-### Custom CE Manager
-Create, register, validate, and maintain modular CE XML files without mixing them into the main loot file.
-
-![Custom CE Manager](docs/screenshots/ce-manager-empty.png)
-
-### Loot Editor in use
-Search, review, edit, and validate live loot entries from `types.xml`.
-
-![Loot Editor loaded](docs/screenshots/loot-editor-loaded.png)
-
-### Registered Custom CE files
-See registered custom files, their root type, path, status, and available actions.
-
-![Custom CE Manager loaded](docs/screenshots/ce-manager-loaded.png)
-
-### Validation Feed in action
-The validation panel makes real data issues obvious before save time.
-
-![Validation Feed](docs/screenshots/validation-feed.png)
-
----
 
 ## Typical Workflow
 
 1. Open your DayZ mission folder.
 2. Let the app load `db/types.xml`.
 3. Search or filter the entries you want to work on.
-4. Edit values and keep an eye on the **Validation Feed**.
-5. Use **Preview Diff** to inspect XML changes.
+4. Edit values in the left inspector and keep an eye on the **Validation Feed**.
+5. Use **Preview** to inspect XML changes.
 6. Save changes with **Auto-backup before saving** enabled.
 7. Use **Custom CE Manager** to create or maintain modular CE files registered in `cfgeconomycore.xml`.
 

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/DZServerToolkit/DZServerToolkit.csproj" />
+  <Project Path="tests/DZServerToolkit.Tests/DZServerToolkit.Tests.csproj" />
+</Solution>

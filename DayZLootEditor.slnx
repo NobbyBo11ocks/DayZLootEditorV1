@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src/DayZLootEditor/DayZLootEditor.csproj" />
-  <Project Path="tests/DayZLootEditor.Tests/DayZLootEditor.Tests.csproj" />
-</Solution>

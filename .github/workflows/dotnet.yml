@@ -18,10 +18,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore ./DayZLootEditor.slnx
+        run: dotnet restore ./DZServerToolkit.slnx
 
       - name: Build
-        run: dotnet build ./DayZLootEditor.slnx --configuration Release --no-restore
+        run: dotnet build ./DZServerToolkit.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test ./DayZLootEditor.slnx --configuration Release --no-build
+        run: dotnet test ./DZServerToolkit.slnx --configuration Release --no-build
