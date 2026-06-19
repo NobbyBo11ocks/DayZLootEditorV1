@@ -10,23 +10,14 @@
         WindowStartupLocation="CenterScreen">
   <Grid RowDefinitions="Auto,*,30">
     <Border Grid.Row="0" Classes="hero">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button Classes="nav tab" Classes.active="{Binding IsLootEditorVisible}" Content="Loot" Command="{Binding ShowLootEditorCommand}" />
           <Button Classes="nav tab" Classes.active="{Binding IsCustomCeVisible}" Content="Custom CE" Command="{Binding ShowCustomCeCommand}" />
           <Button Classes="nav tab" Classes.active="{Binding IsInfoVisible}" Content="Help" Command="{Binding ShowInfoCommand}" />
         </StackPanel>
 
-        <WrapPanel Grid.Column="1" Orientation="Horizontal" ItemHeight="34" ItemSpacing="5" VerticalAlignment="Center">
-          <Border Classes="status-chip" IsVisible="{Binding HasMissionContextBadge}">
-            <TextBlock Classes="tiny-muted badge" Text="{Binding MissionContextBadgeText}" />
-          </Border>
-          <Border Classes="status-chip" IsVisible="{Binding HasFileContextBadge}">
-            <TextBlock Classes="tiny-muted badge" Text="{Binding FileContextBadgeText}" />
-          </Border>
-        </WrapPanel>
-
-        <WrapPanel Grid.Column="2" Orientation="Horizontal" ItemHeight="34" ItemSpacing="5" VerticalAlignment="Center">
+        <WrapPanel Grid.Column="1" Orientation="Horizontal" ItemHeight="34" ItemSpacing="5" VerticalAlignment="Center" HorizontalAlignment="Right">
           <Button Classes="primary toolbar-button compact" Content="Open Mission" Command="{Binding OpenMissionFolderCommand}" />
           <Button Classes="toolbar-button compact" Content="Open XML" Command="{Binding OpenTypesFileCommand}" />
           <Button Classes="toolbar-button compact" Content="Unload" Command="{Binding UnloadLoadedFileCommand}" />
@@ -237,33 +228,6 @@
             </Expander>
           </Border>
 
-          <Border Classes="card compact-card" IsVisible="{Binding IsLootEditorVisible}">
-            <Expander IsExpanded="False" ExpandDirection="Down">
-              <Expander.Header>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                  <TextBlock Classes="section-title" Text="Validation" />
-                  <Button Grid.Column="1" Classes="micro sidebar-action" Content="Run" Command="{Binding ValidateCommand}" />
-                </Grid>
-              </Expander.Header>
-              <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="5">
-                <Border Classes="inner-card soft">
-                  <TextBlock Classes="muted" Text="{Binding ValidationSummary}" TextWrapping="Wrap" />
-                </Border>
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding ValidationIssues}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <Border Classes="inner-card soft" Margin="0,0,0,4">
-                        <StackPanel Classes="stack-tight">
-                          <TextBlock Text="{Binding SeverityText}" FontWeight="Bold" />
-                          <TextBlock Classes="muted" Text="{Binding DisplayText}" TextWrapping="Wrap" />
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </Grid>
-            </Expander>
-          </Border>
 
           <Border Classes="card compact-card" IsVisible="{Binding IsLootEditorVisible}">
             <Expander IsExpanded="False" ExpandDirection="Down">
@@ -329,7 +293,6 @@
                 <WrapPanel Orientation="Horizontal" ItemHeight="24" ItemSpacing="5">
                   <Button Classes="primary compact" Content="Create / Register" Command="{Binding AddCustomCeFileCommand}" />
                   <Button Classes="subtle compact" Content="Reset" Command="{Binding ResetCustomCeFormCommand}" />
-                  <Button Classes="compact" Content="Validate CE" Command="{Binding ValidateCustomCeCommand}" />
                 </WrapPanel>
               </StackPanel>
             </Expander>
@@ -662,7 +625,7 @@
                 <TextBlock Classes="section-title" Text="Custom CE Workflow" />
                 <TextBlock Classes="help" Text="Open a mission folder before using CE tools, because registrations are written against cfgeconomycore.xml." TextWrapping="Wrap" />
                 <TextBlock Classes="help" Text="Create/Register and Selected CE live in the left rail so the table stays the main focus." TextWrapping="Wrap" />
-                <TextBlock Classes="help" Text="Validate CE Setup checks missing files, duplicate registrations, root issues, and path/type conflicts." TextWrapping="Wrap" />
+                <TextBlock Classes="help" Text="CE setup checks missing files, duplicate registrations, root issues, and path/type conflicts." TextWrapping="Wrap" />
                 <TextBlock Classes="help" Text="Use Repair Diff before Repair when a file root needs correction." TextWrapping="Wrap" />
               </StackPanel>
             </Border>
@@ -697,9 +660,14 @@
     </Grid>
 
     <Border Grid.Row="2" Classes="footer">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
         <TextBlock Classes="footer-text" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Classes="footer-text" Text="{Binding ActiveFeature}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Classes="footer-text"
+                   Text="{Binding FooterValidationText}"
+                   Foreground="{Binding FooterValidationBrush}"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Classes="footer-text" Text="{Binding ActiveFeature}" VerticalAlignment="Center" />
       </Grid>
     </Border>
   </Grid>

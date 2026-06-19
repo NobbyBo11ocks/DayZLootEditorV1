@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Xml.Linq;
+using Avalonia.Media;
 using DZServerToolkit.Models;
 using DZServerToolkit.Services;
 
@@ -36,15 +37,9 @@ public sealed class TypesEditorViewModel : ObservableObject
     private string _statusMessage = "Step 1: open your DayZ mission folder.";
     private bool _isBusy;
     private bool _autoBackup = true;
-    private bool _isQuickHelpExpanded;
-    private bool _isRecentAccessExpanded;
     private bool _hasCompletedFirstMissionLoad;
     private decimal _bulkScalePercent = 100m;
-    private bool _isScaleHelpVisible;
-    private bool _isProfileTemplateHelpVisible;
-    private bool _isSavePreviewHelpVisible;
     private int _errorCount;
-    private int _warningCount;
     private int _infoCount;
     private bool _hasWorkingFile;
     private string _validationSummary = "Open a mission folder or types.xml to begin.";
@@ -53,7 +48,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     private string _newCeFileName = "types_custom.xml";
     private string _newCeFileType = "types";
     private string _customCeStatus = "Open a mission folder to manage custom CE files.";
-    private string _customCeSummary = "This is a separate feature for registering extra CE XML files in cfgeconomycore.xml.";
     private string _customCePreviewSummary = "Choose a template or enter a folder/file/type to preview what will be written.";
     private int _customCeErrorCount;
     private int _customCeReadyCount;
@@ -62,10 +56,8 @@ public sealed class TypesEditorViewModel : ObservableObject
     private string _customCeSearchText = string.Empty;
     private string _selectedCustomCeFilter = "All";
     private LootProfileTemplate? _selectedProfileTemplate;
-    private string _profileTemplateSummary = "Pick a profile template to apply category-aware balancing to the visible rows.";
     private string _selectedRecentTypesFile = string.Empty;
     private string _selectedRecentMissionFolder = string.Empty;
-    private string _savePreviewText = EmptyPreview;
     private string _savePreviewSummary = EmptyPreview;
     private string _customCeRepairDiffSummary = "Select a custom CE file to preview root-fix changes before running repair.";
     private string _customCeConflictSummary = "Refresh custom CE validation to detect duplicate registrations and path/type conflicts.";
@@ -123,14 +115,9 @@ public sealed class TypesEditorViewModel : ObservableObject
         SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy && Entries.Count > 0, HandleUnhandledError);
         SaveAsCommand = new AsyncRelayCommand(SaveAsAsync, () => !IsBusy && Entries.Count > 0, HandleUnhandledError);
         ValidateCommand = new RelayCommand(() => Validate(updateStatusMessage: true), () => !IsBusy);
-        ToggleQuickHelpCommand = new RelayCommand(ToggleQuickHelp);
-        ToggleRecentAccessCommand = new RelayCommand(ToggleRecentAccess);
         AddEntryCommand = new RelayCommand(AddEntry, () => !IsBusy && HasWorkingFile);
         DeleteSelectedCommand = new RelayCommand(DeleteSelected, () => !IsBusy && SelectedEntry is not null);
         ScaleVisibleCommand = new RelayCommand(ScaleVisibleRows, () => !IsBusy && FilteredEntries.Count > 0);
-        ToggleScaleHelpCommand = new RelayCommand(ToggleScaleHelp);
-        ToggleProfileTemplateHelpCommand = new RelayCommand(ToggleProfileTemplateHelp);
-        ToggleSavePreviewHelpCommand = new RelayCommand(ToggleSavePreviewHelp);
         ClearFiltersCommand = new RelayCommand(ClearFilters, () => !IsBusy);
         ClearLootSearchCommand = new RelayCommand(ClearLootSearch, () => !IsBusy && HasSearchFilter);
         ClearLootCategoryFilterCommand = new RelayCommand(ClearLootCategoryFilter, () => !IsBusy && HasCategoryFilter);
@@ -146,9 +133,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         ShowCustomCeCommand = new RelayCommand(() => ActiveFeature = CustomCeFeature, () => !IsBusy);
         ShowInfoCommand = new RelayCommand(() => ActiveFeature = InfoFeature, () => !IsBusy);
         AddCustomCeFileCommand = new AsyncRelayCommand(AddCustomCeFileAsync, () => !IsBusy && HasMissionFolder, HandleUnhandledError);
-        ValidateCustomCeCommand = new AsyncRelayCommand(RefreshCustomCeAsync, () => !IsBusy && HasMissionFolder, HandleUnhandledError);
-        ClearCustomCeSearchCommand = new RelayCommand(ClearCustomCeSearch, () => !IsBusy && HasCustomCeSearchFilter);
-        ClearCustomCeStateFilterCommand = new RelayCommand(ClearCustomCeStateFilter, () => !IsBusy && HasCustomCeStateFilter);
         ClearAllCustomCeFiltersCommand = new RelayCommand(ClearAllCustomCeFilters, () => !IsBusy && HasActiveCustomCeFilterSummary);
         OpenSelectedCustomTypesCommand = new AsyncRelayCommand(OpenSelectedCustomTypesAsync, () => !IsBusy && SelectedCustomCeFile is not null, HandleUnhandledError);
         UnregisterSelectedCustomCeCommand = new AsyncRelayCommand(UnregisterSelectedCustomCeAsync, () => !IsBusy && SelectedCustomCeFile is not null, HandleUnhandledError);
@@ -195,7 +179,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
     }
 
-
     public ObservableCollection<DayzTypeEntry> Entries { get; } = new();
     public ObservableCollection<DayzTypeEntry> FilteredEntries { get; } = new();
     public ObservableCollection<ValidationIssue> ValidationIssues { get; } = new();
@@ -215,8 +198,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public ObservableCollection<string> CustomCeConflictItems { get; } = new();
 
     public AsyncRelayCommand OpenTypesFileCommand { get; }
-    public RelayCommand ToggleQuickHelpCommand { get; }
-    public RelayCommand ToggleRecentAccessCommand { get; }
     public AsyncRelayCommand OpenMissionFolderCommand { get; }
     public AsyncRelayCommand UnloadLoadedFileCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
@@ -225,9 +206,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public RelayCommand AddEntryCommand { get; }
     public RelayCommand DeleteSelectedCommand { get; }
     public RelayCommand ScaleVisibleCommand { get; }
-    public RelayCommand ToggleScaleHelpCommand { get; }
-    public RelayCommand ToggleProfileTemplateHelpCommand { get; }
-    public RelayCommand ToggleSavePreviewHelpCommand { get; }
     public RelayCommand ClearFiltersCommand { get; }
     public RelayCommand ClearLootSearchCommand { get; }
     public RelayCommand ClearLootCategoryFilterCommand { get; }
@@ -242,9 +220,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public RelayCommand ShowCustomCeCommand { get; }
     public RelayCommand ShowInfoCommand { get; }
     public AsyncRelayCommand AddCustomCeFileCommand { get; }
-    public AsyncRelayCommand ValidateCustomCeCommand { get; }
-    public RelayCommand ClearCustomCeSearchCommand { get; }
-    public RelayCommand ClearCustomCeStateFilterCommand { get; }
     public RelayCommand ClearAllCustomCeFiltersCommand { get; }
     public AsyncRelayCommand OpenSelectedCustomTypesCommand { get; }
     public AsyncRelayCommand UnregisterSelectedCustomCeCommand { get; }
@@ -276,40 +251,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public bool IsCustomCeVisible => string.Equals(ActiveFeature, CustomCeFeature, StringComparison.OrdinalIgnoreCase);
     public bool IsInfoVisible => string.Equals(ActiveFeature, InfoFeature, StringComparison.OrdinalIgnoreCase);
 
-    public bool IsQuickHelpExpanded
-    {
-        get => _isQuickHelpExpanded;
-        set
-        {
-            if (SetProperty(ref _isQuickHelpExpanded, value))
-            {
-                OnPropertyChanged(nameof(IsQuickHelpCollapsed));
-                OnPropertyChanged(nameof(QuickHelpToggleText));
-            }
-        }
-    }
-
-    public bool IsQuickHelpCollapsed => !IsQuickHelpExpanded;
-
-    public string QuickHelpToggleText => IsQuickHelpExpanded ? "Hide steps" : "Show steps";
-
-    public bool IsRecentAccessExpanded
-    {
-        get => _isRecentAccessExpanded;
-        set
-        {
-            if (SetProperty(ref _isRecentAccessExpanded, value))
-            {
-                OnPropertyChanged(nameof(IsRecentAccessCollapsed));
-                OnPropertyChanged(nameof(RecentAccessToggleText));
-            }
-        }
-    }
-
-    public bool IsRecentAccessCollapsed => !IsRecentAccessExpanded;
-
-    public string RecentAccessToggleText => IsRecentAccessExpanded ? "Hide" : "Show";
-
     public bool HasCompletedFirstMissionLoad
     {
         get => _hasCompletedFirstMissionLoad;
@@ -331,79 +272,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public string SearchFilterChipText => $"Search: {SearchText.Trim()}";
     public string CategoryFilterChipText => $"Category: {SelectedCategory}";
     public string IssueFilterChipText => "Issues only";
-
-    public string SelectedEntryInsightTitle
-    {
-        get
-        {
-            if (SelectedEntry is null)
-            {
-                return "No loot row selected";
-            }
-
-            if (SelectedEntry.HasIssues)
-            {
-                return "This row needs attention";
-            }
-
-            if (SelectedEntry.IsDirty)
-            {
-                return "This row has unsaved edits";
-            }
-
-            if (!string.IsNullOrWhiteSpace(SelectedEntry.Category))
-            {
-                return $"This row drives {SelectedEntry.Category} balancing";
-            }
-
-            return "This row is ready for focused editing";
-        }
-    }
-
-    public string SelectedEntryInsightSummary
-    {
-        get
-        {
-            if (SelectedEntry is null)
-            {
-                return "Pick a loot row to see why it matters before you start editing values.";
-            }
-
-            if (SelectedEntry.HasIssues)
-            {
-                return string.IsNullOrWhiteSpace(SelectedEntry.IssueSummary)
-                    ? "Validation found issues on this row, so it is worth reviewing before saving."
-                    : SelectedEntry.IssueSummary;
-            }
-
-            var usage = string.IsNullOrWhiteSpace(SelectedEntry.UsagesCsv) ? "general loot flow" : SelectedEntry.UsagesCsv;
-            var value = string.IsNullOrWhiteSpace(SelectedEntry.ValuesCsv) ? "default value buckets" : SelectedEntry.ValuesCsv;
-            return $"{SelectedEntry.Name} currently contributes to {usage} with {value}. Use the edit panel to keep this row balanced with the rest of the table.";
-        }
-    }
-
-    public string SelectedEntryNextAction
-    {
-        get
-        {
-            if (SelectedEntry is null)
-            {
-                return "Next: select a row from the grid.";
-            }
-
-            if (SelectedEntry.HasIssues)
-            {
-                return "Next: review the issue summary, then validate after adjusting Nominal, Min, Usage, or Value.";
-            }
-
-            if (SelectedEntry.IsDirty)
-            {
-                return "Next: preview the diff or save when you are happy with the changes.";
-            }
-
-            return "Next: tweak values carefully, then validate to confirm the row still looks healthy.";
-        }
-    }
 
     public string SearchText
     {
@@ -468,8 +336,6 @@ public sealed class TypesEditorViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(FileDisplayName));
                 OnPropertyChanged(nameof(HasWorkingFile));
-                OnPropertyChanged(nameof(HasFileContextBadge));
-                OnPropertyChanged(nameof(FileContextBadgeText));
                 OnPropertyChanged(nameof(LoadedMode));
                 OnPropertyChanged(nameof(HasLootRowCountSummary));
                 OnPropertyChanged(nameof(LootRowCountSummaryText));
@@ -489,14 +355,11 @@ public sealed class TypesEditorViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(HasMissionFolder));
                 OnPropertyChanged(nameof(MissionDisplayName));
-                OnPropertyChanged(nameof(HasMissionContextBadge));
-                OnPropertyChanged(nameof(MissionContextBadgeText));
                 OnPropertyChanged(nameof(HasCustomCeRowCountSummary));
                 OnPropertyChanged(nameof(CustomCeRowCountSummaryText));
                 NotifyCustomCeSelectionStateChanged();
                 RefreshCustomCePreview();
                 AddCustomCeFileCommand.NotifyCanExecuteChanged();
-                ValidateCustomCeCommand.NotifyCanExecuteChanged();
                 UnloadLoadedFileCommand.NotifyCanExecuteChanged();
             }
         }
@@ -504,8 +367,6 @@ public sealed class TypesEditorViewModel : ObservableObject
 
     public bool HasMissionFolder => !string.IsNullOrWhiteSpace(MissionFolder) && Directory.Exists(MissionFolder);
     public string MissionDisplayName => HasMissionFolder ? Path.GetFileName(MissionFolder) : "No mission folder opened";
-    public bool HasMissionContextBadge => HasMissionFolder;
-    public string MissionContextBadgeText => $"Mission: {MissionDisplayName}";
 
     private void SetWorkingFileState(bool hasWorkingFile)
     {
@@ -519,8 +380,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowLootOnboarding));
         OnPropertyChanged(nameof(ShowLootNoResults));
         OnPropertyChanged(nameof(ShowLootSelectionHint));
-        OnPropertyChanged(nameof(HasFileContextBadge));
-        OnPropertyChanged(nameof(FileContextBadgeText));
         OnPropertyChanged(nameof(HasLootRowCountSummary));
         OnPropertyChanged(nameof(LootRowCountSummaryText));
         OnPropertyChanged(nameof(LoadedMode));
@@ -556,28 +415,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         set => SetProperty(ref _bulkScalePercent, value <= 0 ? 1 : value);
     }
 
-    public bool IsScaleHelpVisible
-    {
-        get => _isScaleHelpVisible;
-        set => SetProperty(ref _isScaleHelpVisible, value);
-    }
-
-    public string ScaleActionLabel => "Adjust Counts";
-    public string ScaleActionHelpSummary => "Changes Nominal and Min for the rows you can currently see.";
-    public string ScaleActionHelpDetails => "Use a percentage to raise or lower spawn counts for the visible rows only. 100% keeps values the same. 150% increases Nominal and Min by 50%. 50% cuts them in half. It does not change Lifetime, Restock, category, usage, tags, or hidden rows filtered out of the list.";
-
-    public bool IsProfileTemplateHelpVisible
-    {
-        get => _isProfileTemplateHelpVisible;
-        set => SetProperty(ref _isProfileTemplateHelpVisible, value);
-    }
-
-    public bool IsSavePreviewHelpVisible
-    {
-        get => _isSavePreviewHelpVisible;
-        set => SetProperty(ref _isSavePreviewHelpVisible, value);
-    }
-
     public string ProfileTemplateLabel => "Balance Preset";
     public string ProfileTemplateActionLabel => "Apply Preset";
     public string ProfileTemplateHelpSummary => "Applies a ready-made balance style to the rows you can currently see.";
@@ -590,13 +427,14 @@ public sealed class TypesEditorViewModel : ObservableObject
     public int ErrorCount
     {
         get => _errorCount;
-        private set => SetProperty(ref _errorCount, value);
-    }
-
-    public int WarningCount
-    {
-        get => _warningCount;
-        private set => SetProperty(ref _warningCount, value);
+        private set
+        {
+            if (SetProperty(ref _errorCount, value))
+            {
+                OnPropertyChanged(nameof(FooterValidationText));
+                OnPropertyChanged(nameof(FooterValidationBrush));
+            }
+        }
     }
 
     public int InfoCount
@@ -614,8 +452,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public bool ShowLootNoResults => HasWorkingFile && FilteredEntries.Count == 0;
     public bool ShowLootSelectionHint => HasWorkingFile && FilteredEntries.Count > 0 && IsEntrySelectionEmpty;
     public string FileDisplayName => string.IsNullOrWhiteSpace(FilePath) ? "No types.xml loaded" : Path.GetFileName(FilePath);
-    public bool HasFileContextBadge => HasWorkingFile;
-    public string FileContextBadgeText => $"File: {FileDisplayName}";
     public bool HasLootRowCountSummary => HasWorkingFile && TotalEntries > 0;
     public string LootRowCountSummaryText => FilteredCount == TotalEntries
         ? $"Showing all {TotalEntries:N0} row(s)"
@@ -627,6 +463,14 @@ public sealed class TypesEditorViewModel : ObservableObject
         get => _validationSummary;
         private set => SetProperty(ref _validationSummary, value ?? string.Empty);
     }
+
+    public string FooterValidationText => ErrorCount == 1
+        ? "Validation: 1 error"
+        : $"Validation: {ErrorCount:N0} errors";
+
+    public IBrush FooterValidationBrush => ErrorCount > 0
+        ? Brushes.IndianRed
+        : Brushes.LimeGreen;
 
     public CustomCeFileEntry? SelectedCustomCeFile
     {
@@ -690,12 +534,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     {
         get => _customCeStatus;
         private set => SetProperty(ref _customCeStatus, value ?? string.Empty);
-    }
-
-    public string CustomCeSummary
-    {
-        get => _customCeSummary;
-        private set => SetProperty(ref _customCeSummary, value ?? string.Empty);
     }
 
     public int CustomCeErrorCount
@@ -770,41 +608,6 @@ public sealed class TypesEditorViewModel : ObservableObject
     public string CustomCeSearchFilterChipText => $"Search: {CustomCeSearchText.Trim()}";
     public string CustomCeStateFilterChipText => $"Health: {SelectedCustomCeFilter}";
 
-    public string SelectedCustomCeInsightTitle
-    {
-        get
-        {
-            if (SelectedCustomCeFile is null)
-            {
-                return "No custom CE file selected";
-            }
-
-            if (!string.Equals(SelectedCustomCeFile.Status, "OK", StringComparison.OrdinalIgnoreCase))
-            {
-                return "This CE file is affecting registration health";
-            }
-
-            return $"{SelectedCustomCeFile.Type} registration looks healthy";
-        }
-    }
-
-    public string SelectedCustomCeInsightSummary
-    {
-        get
-        {
-            if (SelectedCustomCeFile is null)
-            {
-                return "Pick a registered CE file to see why it matters before you repair, unregister, or delete it.";
-            }
-
-            var notes = string.IsNullOrWhiteSpace(SelectedCustomCeFile.IssueSummary)
-                ? "No active issues were reported for this entry."
-                : SelectedCustomCeFile.IssueSummary;
-
-            return $"{SelectedCustomCeFile.RelativePath} contains {SelectedCustomCeFile.ItemCount} tracked entries. {notes}";
-        }
-    }
-
     public string SelectedCustomCeNextAction
     {
         get
@@ -850,16 +653,9 @@ public sealed class TypesEditorViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedProfileTemplate, value))
             {
-                RefreshProfileTemplateSummary();
                 ApplyProfileTemplateCommand?.NotifyCanExecuteChanged();
             }
         }
-    }
-
-    public string ProfileTemplateSummary
-    {
-        get => _profileTemplateSummary;
-        private set => SetProperty(ref _profileTemplateSummary, value ?? string.Empty);
     }
 
     public string SelectedRecentTypesFile
@@ -886,12 +682,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
     }
 
-    public string SavePreviewText
-    {
-        get => _savePreviewText;
-        private set => SetProperty(ref _savePreviewText, value ?? EmptyPreview);
-    }
-
     public string SavePreviewSummary
     {
         get => _savePreviewSummary;
@@ -901,10 +691,8 @@ public sealed class TypesEditorViewModel : ObservableObject
     public bool HasSavePreviewSections => SavePreviewSections.Count > 0;
     public bool IsSavePreviewEmpty => !HasSavePreviewSections;
 
-
     private void ResetSavePreview(string summary = EmptyPreview)
     {
-        SavePreviewText = summary;
         SavePreviewSummary = summary;
         SavePreviewSections.Clear();
         OnPropertyChanged(nameof(HasSavePreviewSections));
@@ -913,7 +701,6 @@ public sealed class TypesEditorViewModel : ObservableObject
 
     private void ApplySavePreview(SaveDiffPreview preview, string fallbackText)
     {
-        SavePreviewText = string.IsNullOrWhiteSpace(fallbackText) ? EmptyPreview : fallbackText;
         SavePreviewSummary = string.IsNullOrWhiteSpace(preview.Summary) ? EmptyPreview : preview.Summary;
         ReplaceCollection(SavePreviewSections, preview.Sections);
         OnPropertyChanged(nameof(HasSavePreviewSections));
@@ -1090,7 +877,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
     }
 
-
     private async Task UnloadLoadedFileAsync()
     {
         if (HasUnsavedChanges)
@@ -1229,7 +1015,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         if (!_hasWorkingFile && Entries.Count == 0)
         {
             ErrorCount = 0;
-            WarningCount = 0;
             InfoCount = 0;
             ValidationSummary = "No file loaded yet. Open a mission folder or types.xml first.";
             if (updateStatusMessage)
@@ -1248,11 +1033,11 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
 
         ErrorCount = issues.Count(issue => issue.Severity == ValidationSeverity.Error);
-        WarningCount = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
+        var warningCount = issues.Count(issue => issue.Severity == ValidationSeverity.Warning);
         InfoCount = issues.Count(issue => issue.Severity == ValidationSeverity.Info);
         ApplyFilters();
 
-        if (ErrorCount == 0 && WarningCount == 0 && InfoCount == 0)
+        if (ErrorCount == 0 && warningCount == 0 && InfoCount == 0)
         {
             ValidationSummary = "No problems found. This file is ready to save.";
             if (updateStatusMessage)
@@ -1270,10 +1055,10 @@ public sealed class TypesEditorViewModel : ObservableObject
         }
         else
         {
-            ValidationSummary = $"Review {WarningCount + InfoCount:N0} note(s). Saving is allowed.";
+            ValidationSummary = $"Review {warningCount + InfoCount:N0} note(s). Saving is allowed.";
             if (updateStatusMessage)
             {
-                StatusMessage = $"Validation complete: {WarningCount + InfoCount:N0} note(s).";
+                StatusMessage = $"Validation complete: {warningCount + InfoCount:N0} note(s).";
             }
         }
     }
@@ -1335,22 +1120,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         Validate();
         GenerateSavePreview();
         StatusMessage = $"Deleted {deletedName}.";
-    }
-
-
-    private void ToggleScaleHelp()
-    {
-        IsScaleHelpVisible = !IsScaleHelpVisible;
-    }
-
-    private void ToggleProfileTemplateHelp()
-    {
-        IsProfileTemplateHelpVisible = !IsProfileTemplateHelpVisible;
-    }
-
-    private void ToggleSavePreviewHelp()
-    {
-        IsSavePreviewHelpVisible = !IsSavePreviewHelpVisible;
     }
 
     private void ScaleVisibleRows()
@@ -1510,7 +1279,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         StatusMessage = "Redo complete.";
     }
 
-
     private void GenerateSavePreview()
     {
         _ = GenerateSavePreviewAsync();
@@ -1622,7 +1390,6 @@ public sealed class TypesEditorViewModel : ObservableObject
             CustomCeErrorCount = 0;
             CustomCeReadyCount = 0;
             CustomCeInfoCount = 0;
-            CustomCeSummary = "Open a mission folder to see or create custom CE files.";
             ReplaceCollection(CustomCeConflictItems, Array.Empty<string>());
             CustomCeConflictSummary = "Refresh custom CE validation to detect duplicate registrations and path/type conflicts.";
             ReplaceCollection(CustomCeRepairDiffSections, Array.Empty<SaveDiffSection>());
@@ -1659,11 +1426,6 @@ public sealed class TypesEditorViewModel : ObservableObject
         CustomCeErrorCount = result.Issues.Count(issue => issue.Severity == ValidationSeverity.Error);
         CustomCeInfoCount = result.Issues.Count(issue => issue.Severity == ValidationSeverity.Info);
         CustomCeReadyCount = result.Entries.Count(entry => string.Equals(entry.Status, "OK", StringComparison.OrdinalIgnoreCase));
-        CustomCeSummary = result.Entries.Count == 0
-            ? "No custom CE files registered yet. Use the creator panel to add one safely."
-            : CustomCeErrorCount == 0
-                ? $"{result.Entries.Count:N0} custom CE file(s) registered. All look ready."
-                : $"Fix {CustomCeErrorCount:N0} Custom CE setup problem(s).";
         ApplyCustomCeFilter();
         RefreshCustomCeConflictSummary();
         OnPropertyChanged(nameof(CustomCeFileCount));
@@ -1732,7 +1494,6 @@ public sealed class TypesEditorViewModel : ObservableObject
             _ => true
         };
     }
-
 
     private void RefreshCustomCeConflictSummary()
     {
@@ -2141,7 +1902,6 @@ private void RefreshCustomCePreview()
     }
 }
 
-
     private void ApplyFilters()
     {
         var query = SearchText.Trim();
@@ -2287,7 +2047,6 @@ private void RefreshCustomCePreview()
         }
     }
 
-
     private void ExecuteBulkMutation(
         int targetCount,
         Action mutate,
@@ -2351,9 +2110,6 @@ private void RefreshCustomCePreview()
         OnPropertyChanged(nameof(HasSelectedEntry));
         OnPropertyChanged(nameof(IsEntrySelectionEmpty));
         OnPropertyChanged(nameof(ShowLootSelectionHint));
-        OnPropertyChanged(nameof(SelectedEntryInsightTitle));
-        OnPropertyChanged(nameof(SelectedEntryInsightSummary));
-        OnPropertyChanged(nameof(SelectedEntryNextAction));
     }
 
     private void NotifyLootFilterSummaryStateChanged()
@@ -2377,8 +2133,6 @@ private void RefreshCustomCePreview()
         OnPropertyChanged(nameof(HasSelectedCustomCeFile));
         OnPropertyChanged(nameof(IsCustomCeSelectionEmpty));
         OnPropertyChanged(nameof(ShowCustomCeSelectionHint));
-        OnPropertyChanged(nameof(SelectedCustomCeInsightTitle));
-        OnPropertyChanged(nameof(SelectedCustomCeInsightSummary));
         OnPropertyChanged(nameof(SelectedCustomCeNextAction));
     }
 
@@ -2397,8 +2151,6 @@ private void RefreshCustomCePreview()
         OnPropertyChanged(nameof(CustomCeStateFilterChipText));
         OnPropertyChanged(nameof(HasCustomCeRowCountSummary));
         OnPropertyChanged(nameof(CustomCeRowCountSummaryText));
-        ClearCustomCeSearchCommand.NotifyCanExecuteChanged();
-        ClearCustomCeStateFilterCommand.NotifyCanExecuteChanged();
         ClearAllCustomCeFiltersCommand.NotifyCanExecuteChanged();
     }
 
@@ -2427,9 +2179,6 @@ private void RefreshCustomCePreview()
         ShowCustomCeCommand.NotifyCanExecuteChanged();
         ShowInfoCommand.NotifyCanExecuteChanged();
         AddCustomCeFileCommand.NotifyCanExecuteChanged();
-        ValidateCustomCeCommand.NotifyCanExecuteChanged();
-        ClearCustomCeSearchCommand.NotifyCanExecuteChanged();
-        ClearCustomCeStateFilterCommand.NotifyCanExecuteChanged();
         ClearAllCustomCeFiltersCommand.NotifyCanExecuteChanged();
         OpenSelectedCustomTypesCommand.NotifyCanExecuteChanged();
         UnregisterSelectedCustomCeCommand.NotifyCanExecuteChanged();
@@ -2490,12 +2239,6 @@ private void RefreshCustomCePreview()
         catch (OperationCanceledException)
         {
         }
-    }
-
-    private void RefreshProfileTemplateSummary()
-    {
-        ProfileTemplateSummary = SelectedProfileTemplate?.Description
-            ?? "Pick a profile template to apply category-aware balancing to the visible rows.";
     }
 
     private async Task<XDocument?> ReloadSavedDocumentAsync(string path)
@@ -2594,7 +2337,6 @@ private void RefreshCustomCePreview()
         FilePath = string.Empty;
         MissionFolder = missionFolder;
         ErrorCount = 0;
-        WarningCount = 0;
         InfoCount = 0;
         ValidationSummary = "No file loaded yet. Open a mission folder or types.xml first.";
         RefreshCategories();
@@ -2659,16 +2401,6 @@ private void RefreshCustomCePreview()
         }
     }
 
-    private void ToggleQuickHelp()
-    {
-        IsQuickHelpExpanded = !IsQuickHelpExpanded;
-    }
-
-    private void ToggleRecentAccess()
-    {
-        IsRecentAccessExpanded = !IsRecentAccessExpanded;
-    }
-
     private static string NormalizeWorkspace(string? workspace)
     {
         if (string.Equals(workspace, CustomCeFeature, StringComparison.OrdinalIgnoreCase))
@@ -2714,7 +2446,6 @@ private void RefreshCustomCePreview()
     {
         return haystack?.Contains(needle, StringComparison.OrdinalIgnoreCase) == true;
     }
-
 
     private static string ResolveMissionFolderSelection(string folder)
     {
